@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand Constants from Doc 02 + User Override */
+  --bg-obsidian: #0a0a0a;
+  --fg-mist: #E7ECEF;
+
+  /* Extended Color Palette */
+  --accent-forest: #0B3B2E;
+  /* Primary - Dark Green */
+  --accent-forest-light: #0F5A47;
+  /* Lighter variant */
+  --accent-forest-dark: #061E17;
+  /* Darker variant */
+
+  --accent-teal: #0D7C66;
+  /* Secondary accent - Teal */
+  --accent-gold: #B8956A;
+  /* Tertiary accent - Muted Gold */
+
+  --neutral-800: #1a1a1a;
+  /* Borders, subtle elements */
+  --neutral-700: #2a2a2a;
+  /* Slightly lighter */
+  --neutral-600: #3a3a3a;
+  /* Mid-tone */
+
+  /* Semantic Variables */
+  --background: var(--bg-obsidian);
+  --foreground: var(--fg-mist);
+  --primary: var(--accent-forest);
+  --primary-foreground: #FFFFFF;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  /* Placeholder for Inter/Satoshi */
+}
+
+/* Logo Carousel Animation */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 20s linear infinite;
+}
+
+.animate-scroll:hover {
+  animation-play-state: paused;
+}
+
+/* Text protection from dot background */
+.text-protected {
+  position: relative;
+  z-index: 20;
+  text-shadow: 0 0 20px rgba(10, 10, 10, 0.8);
+}
+
+/* Section title glow effect when in view */
+.section-title {
+  filter: brightness(0.7);
+  transition: all 0.6s ease-out;
+}
+
+.section-title.active {
+  filter: brightness(1.5);
+  text-shadow:
+    0 0 10px rgba(184, 149, 106, 0.6),
+    0 0 20px rgba(184, 149, 106, 0.4),
+    0 0 30px rgba(184, 149, 106, 0.2);
+  transform: scale(1.05);
+}
