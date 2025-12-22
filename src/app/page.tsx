@@ -9,6 +9,7 @@ import { TypewriterPlaceholder } from '@/components/ui/TypewriterPlaceholder';
 import { PainCarousel } from '@/components/ui/PainCarousel';
 import { MiniLogoCarousel } from '@/components/ui/MiniLogoCarousel';
 import { Footer } from '@/components/ui/Footer';
+import { ChatConsentBanner } from '@/components/ui/ChatConsentBanner';
 import { ArrowRight, Zap, Calendar, Users2, ClipboardList, X, Sparkles, MessageSquare, CheckCircle, Shield, Send, ArrowUpRight, Route, FileText, Rocket, Target, Activity, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,8 @@ export default function Home() {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [hasConsent, setHasConsent] = useState(false);
+  const [showConsentBanner, setShowConsentBanner] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -74,12 +77,19 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  const handleInputSubmit = (e: React.FormEvent) => {
+  const handleInputSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
+    // Check consent
+    if (!hasConsent) {
+      alert('Por favor, aceite os termos para usar o chat.');
+      return;
+    }
+
     const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', text: inputValue };
     setMessages(prev => [...prev, userMsg]);
+    const currentInput = inputValue;
     setInputValue("");
 
     if (!isExpanded) {
@@ -87,16 +97,69 @@ export default function Home() {
     }
 
     setIsTyping(true);
-    setTimeout(() => {
+
+    try {
+      // Call AI API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: currentInput,
+          conversationHistory: messages.map(m => ({
+            role: m.role === 'user' ? 'user' : 'bot',
+            content: m.text
+          })),
+          userConsent: hasConsent
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
+
       setIsTyping(false);
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'bot',
-        text: 'Entendi sua necessidade. Para te ajudar melhor, em qual segmento sua empresa atua?'
+        text: data.response
       };
       setMessages(prev => [...prev, botMsg]);
-    }, 1500);
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      setIsTyping(false);
+      const errorMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'bot',
+        text: 'Desculpe, tive um problema ao processar sua mensagem. Por favor, tente novamente.'
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    }
   };
+
+  const handleConsentAccept = () => {
+    setHasConsent(true);
+    setShowConsentBanner(false);
+    // Store consent in localStorage
+    localStorage.setItem('idsr_chat_consent', 'true');
+  };
+
+  const handleConsentDecline = () => {
+    setHasConsent(false);
+    setShowConsentBanner(false);
+    setIsExpanded(false);
+  };
+
+  // Check for existing consent on mount
+  useEffect(() => {
+    const consent = localStorage.getItem('idsr_chat_consent');
+    if (consent === 'true') {
+      setHasConsent(true);
+      setShowConsentBanner(false);
+    }
+  }, []);
 
   const handleClose = () => {
     setIsExpanded(false);
@@ -175,6 +238,14 @@ export default function Home() {
 
             {isExpanded && (
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {/* Consent Banner */}
+                {showConsentBanner && !hasConsent && (
+                  <ChatConsentBanner
+                    onAccept={handleConsentAccept}
+                    onDecline={handleConsentDecline}
+                  />
+                )}
+
                 <AnimatePresence initial={false}>
                   {messages.map((msg) => (
                     <motion.div
