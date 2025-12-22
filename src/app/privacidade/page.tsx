@@ -248,6 +248,25 @@ export default function PrivacidadePage() {
                         </div>
                     </div>
 
+                    {/* Section 10.5 - AI Chat */}
+                    <div>
+                        <div className="flex items-center gap-3 mb-4">
+                            <Database className="w-5 h-5 text-[#0D7C66]" />
+                            <h2 className="text-2xl font-extralight text-[#E7ECEF]">
+                                10.5. Chat com Inteligência Artificial
+                            </h2>
+                        </div>
+                        <div className="space-y-4 text-sm text-[#E7ECEF]/60 leading-relaxed">
+                            <p>Nosso chat utiliza IA (Google Gemini) para atendimento personalizado. Coletamos mensagens, informações da empresa e metadados para fornecer respostas, recomendar soluções e melhorar o serviço. Dados são criptografados, retidos por até 24 meses e podem ser anonimizados para treinamento de IA.</p>
+                            <div className="bg-[#0B3B2E]/20 border border-[#0D7C66]/30 rounded-xl p-4">
+                                <p className="text-[#E7ECEF]">
+                                    <strong>Consentimento:</strong> Ao usar o chat, você consente com esta coleta. Pode solicitar acesso/exclusão via{' '}
+                                    <a href="mailto:privacidade@idsr.com.br" className="text-[#0D7C66] hover:text-[#0F5A47] transition-colors">privacidade@idsr.com.br</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Section 11 */}
                     <div>
                         <div className="flex items-center gap-3 mb-4">
