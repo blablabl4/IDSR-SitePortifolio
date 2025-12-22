@@ -1,5 +1,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+    createConversation,
+    getConversation,
+    saveMessage,
+    getMessages,
+    getSessionConversations,
+    trackFAQ,
+    generateId,
+    type Message
+} from '@/lib/kv';
 
 // Initialize Google AI
 const apiKey = process.env.GOOGLE_AI_API_KEY;
