@@ -28,6 +28,7 @@ export default function Home() {
   const [hasConsent, setHasConsent] = useState(false);
   const [showConsentBanner, setShowConsentBanner] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Center modal when expanded
@@ -45,10 +46,10 @@ export default function Home() {
     }
   }, [isExpanded]);
 
-  // Auto-scroll chat to bottom when new messages arrive
+  // Auto-scroll chat container to bottom when new messages arrive
   useEffect(() => {
-    if (chatEndRef.current && isExpanded) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current && isExpanded) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, isTyping, isExpanded]);
 
@@ -241,7 +242,7 @@ export default function Home() {
             </AnimatePresence>
 
             {isExpanded && (
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4 scroll-smooth">
                 {/* Consent Banner */}
                 {showConsentBanner && !hasConsent && (
                   <ChatConsentBanner
@@ -309,7 +310,7 @@ export default function Home() {
                   style={{ maxHeight: '120px' }}
                 />
                 {!isExpanded && !inputValue && (
-                  <div className="absolute inset-0 flex items-center pointer-events-none">
+                  <div className="absolute inset-0 flex items-center justify-start pl-0 pointer-events-none">
                     <TypewriterPlaceholder
                       phrases={[
                         "Descreva seu desafio operacional...",
