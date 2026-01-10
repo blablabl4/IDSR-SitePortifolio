@@ -45,11 +45,12 @@ export default function Home() {
     }
   }, [isExpanded]);
 
-  // Removed auto-scroll to prevent page from scrolling when modal opens
-  // The chat content scrolls internally via ChatInterface component
-  // useEffect(() => {
-  //   chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  // }, [messages]);
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    if (chatEndRef.current && isExpanded) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isTyping, isExpanded]);
 
   // Section title glow effect
   useEffect(() => {
@@ -283,16 +284,29 @@ export default function Home() {
 
             <form
               onSubmit={handleInputSubmit}
-              className={cn("flex items-center gap-2 px-4 shrink-0", isExpanded ? "h-16 border-t border-[#E7ECEF]/5 bg-[#0a0a0a]" : "h-full")}
+              className={cn("flex items-end gap-2 px-4 shrink-0", isExpanded ? "min-h-16 py-3 border-t border-[#E7ECEF]/5 bg-[#0a0a0a]" : "h-full")}
             >
-              {!isExpanded && <MessageSquare className="w-5 h-5 text-[#E7ECEF]/20" />}
+              {!isExpanded && <MessageSquare className="w-5 h-5 text-[#E7ECEF]/20 mb-2" />}
               <div className="flex-1 relative flex items-center">
-                <input
-                  type="text"
+                <textarea
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder={isExpanded ? "Digite sua mensagem..." : ""}
-                  className="w-full bg-transparent border-none outline-none text-[#E7ECEF] text-base font-light placeholder:text-[#E7ECEF]/30"
+                  onChange={(e) => {
+                    setInputValue(e.target.value);
+                    // Auto-resize textarea
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  }}
+                  onKeyDown={(e) => {
+                    // Enter sends, Shift+Enter adds line break
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleInputSubmit(e as any);
+                    }
+                  }}
+                  placeholder={isExpanded ? "Digite sua mensagem... (Shift+Enter para quebrar linha)" : ""}
+                  rows={1}
+                  className="w-full bg-transparent border-none outline-none text-[#E7ECEF] text-base font-light placeholder:text-[#E7ECEF]/30 resize-none overflow-hidden"
+                  style={{ maxHeight: '120px' }}
                 />
                 {!isExpanded && !inputValue && (
                   <div className="absolute inset-0 flex items-center pointer-events-none">
@@ -310,7 +324,7 @@ export default function Home() {
               <button
                 type="submit"
                 className={cn(
-                  "rounded-lg flex items-center justify-center transition-colors",
+                  "rounded-lg flex items-center justify-center transition-colors shrink-0 mb-0.5",
                   isExpanded ? "w-10 h-10 bg-[#0B3B2E] hover:bg-[#0B3B2E]/80 shadow-lg shadow-[#0B3B2E]/20" : "w-10 h-10 hover:bg-[#E7ECEF]/5"
                 )}
               >
