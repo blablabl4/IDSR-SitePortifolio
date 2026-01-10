@@ -285,9 +285,9 @@ export default function Home() {
 
             <form
               onSubmit={handleInputSubmit}
-              className={cn("flex items-end gap-2 px-4 shrink-0", isExpanded ? "min-h-16 py-3 border-t border-[#E7ECEF]/5 bg-[#0a0a0a]" : "h-full")}
+              className={cn("flex gap-2 px-4 shrink-0", isExpanded ? "items-end min-h-16 py-3 border-t border-[#E7ECEF]/5 bg-[#0a0a0a]" : "items-center h-full")}
             >
-              {!isExpanded && <MessageSquare className="w-5 h-5 text-[#E7ECEF]/20 mb-2" />}
+              {!isExpanded && <MessageSquare className="w-5 h-5 text-[#E7ECEF]/20" />}
               <div className="flex-1 relative flex items-center">
                 <textarea
                   value={inputValue}
