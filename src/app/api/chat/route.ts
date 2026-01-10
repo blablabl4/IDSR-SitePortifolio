@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Use Gemini 1.5 Flash (free tier)
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        // Use Gemini 2.0 Flash (free tier, latest model)
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         // Build conversation history for context
         const history = conversationHistory?.map((msg: any) => ({
@@ -129,24 +129,38 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('Chat API Error:', error);
+        console.error('Error name:', error?.name);
+        console.error('Error message:', error?.message);
+        console.error('Error stack:', error?.stack);
 
         // Handle specific errors
-        if (error.message?.includes('API key')) {
+        if (error.message?.includes('API key') || error.message?.includes('API_KEY')) {
             return NextResponse.json(
-                { error: 'AI service configuration error. Please contact support.' },
+                { error: 'AI service configuration error. Please contact support.', details: 'API key issue' },
                 { status: 500 }
             );
         }
 
         if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
             return NextResponse.json(
-                { error: 'Service temporarily unavailable. Please try again later.' },
+                { error: 'Service temporarily unavailable. Please try again later.', details: 'Rate limit' },
                 { status: 429 }
             );
         }
 
+        if (error.message?.includes('SAFETY') || error.message?.includes('blocked')) {
+            return NextResponse.json(
+                { error: 'A mensagem foi bloqueada por questões de segurança. Tente reformular.', details: 'Safety filter' },
+                { status: 400 }
+            );
+        }
+
+        // Return the actual error message for debugging
         return NextResponse.json(
-            { error: 'Failed to process your message. Please try again.' },
+            {
+                error: 'Failed to process your message. Please try again.',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            },
             { status: 500 }
         );
     }
