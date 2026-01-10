@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Use Gemini 2.0 Flash (free tier, latest model)
+        // Use Gemini 2.0 Flash (free tier, latest model) - Updated 2026-01-10
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         // Build conversation history for context
