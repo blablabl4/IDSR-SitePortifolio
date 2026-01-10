@@ -1,24 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import {
-    createConversation,
-    getConversation,
-    saveMessage,
-    getMessages,
-    getSessionConversations,
-    trackFAQ,
-    generateId,
-    type Message
-} from '@/lib/kv';
-
-// Initialize Google AI
-const apiKey = process.env.GOOGLE_AI_API_KEY;
-
-if (!apiKey) {
-    throw new Error('GOOGLE_AI_API_KEY is not set in environment variables');
-}
-
-const genAI = new GoogleGenerativeAI(apiKey);
 
 // System context about IDSR - COMPLETE BUSINESS CONTEXT v2
 const SYSTEM_CONTEXT = `Você é o assistente virtual EXCLUSIVO da IDSR (Infraestrutura de Dados, Sistemas e Rastreabilidade).
@@ -95,6 +76,18 @@ export async function POST(req: NextRequest) {
                 { status: 400 }
             );
         }
+
+        // Initialize Google AI (check API key first)
+        const apiKey = process.env.GOOGLE_AI_API_KEY;
+        if (!apiKey) {
+            console.error('GOOGLE_AI_API_KEY is not configured');
+            return NextResponse.json(
+                { error: 'AI service is not configured. Please contact support.' },
+                { status: 503 }
+            );
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
 
         // Use Gemini 1.5 Flash (free tier)
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
