@@ -81,9 +81,12 @@ export default function Home() {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    // Check consent
+    // Check consent - if not accepted, expand chat to show banner
     if (!hasConsent) {
-      alert('Por favor, aceite os termos para usar o chat.');
+      if (!isExpanded) {
+        setIsExpanded(true);
+        setShowConsentBanner(true);
+      }
       return;
     }
 
