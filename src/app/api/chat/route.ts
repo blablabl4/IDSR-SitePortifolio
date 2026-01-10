@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 
 // System context about IDSR - COMPLETE BUSINESS CONTEXT v2
@@ -77,50 +77,45 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Initialize Google AI (check API key first)
-        const apiKey = process.env.GOOGLE_AI_API_KEY;
+        // Initialize OpenAI
+        const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
-            console.error('GOOGLE_AI_API_KEY is not configured');
+            console.error('OPENAI_API_KEY is not configured');
             return NextResponse.json(
                 { error: 'AI service is not configured. Please contact support.' },
                 { status: 503 }
             );
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const openai = new OpenAI({ apiKey });
 
-        // Use Gemini 2.0 Flash (free tier, latest model) - Updated 2026-01-10
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        // Build messages array for OpenAI
+        const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+            { role: 'system', content: SYSTEM_CONTEXT },
+        ];
 
-        // Build conversation history for context
-        const history = conversationHistory?.map((msg: any) => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.content }],
-        })) || [];
+        // Add conversation history
+        if (conversationHistory && Array.isArray(conversationHistory)) {
+            for (const msg of conversationHistory) {
+                messages.push({
+                    role: msg.role === 'user' ? 'user' : 'assistant',
+                    content: msg.content || msg.text || '',
+                });
+            }
+        }
 
-        // Start chat with history
-        const chat = model.startChat({
-            history: [
-                {
-                    role: 'user',
-                    parts: [{ text: 'Olá, você é o assistente da IDSR, certo?' }],
-                },
-                {
-                    role: 'model',
-                    parts: [{ text: SYSTEM_CONTEXT }],
-                },
-                ...history,
-            ],
-            generationConfig: {
-                maxOutputTokens: 500,
-                temperature: 0.7,
-            },
+        // Add current user message
+        messages.push({ role: 'user', content: message });
+
+        // Call OpenAI API using GPT-4o-mini (fast and cheap)
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages,
+            max_tokens: 500,
+            temperature: 0.7,
         });
 
-        // Send user message
-        const result = await chat.sendMessage(message);
-        const response = result.response;
-        const text = response.text();
+        const text = completion.choices[0]?.message?.content || 'Desculpe, não consegui gerar uma resposta.';
 
         return NextResponse.json({
             response: text,
@@ -131,36 +126,31 @@ export async function POST(req: NextRequest) {
         console.error('Chat API Error:', error);
         console.error('Error name:', error?.name);
         console.error('Error message:', error?.message);
-        console.error('Error stack:', error?.stack);
 
-        // Handle specific errors
-        if (error.message?.includes('API key') || error.message?.includes('API_KEY')) {
+        // Handle specific OpenAI errors
+        if (error.code === 'invalid_api_key' || error.message?.includes('API key')) {
             return NextResponse.json(
-                { error: 'AI service configuration error. Please contact support.', details: 'API key issue' },
+                { error: 'AI service configuration error. Please contact support.' },
                 { status: 500 }
             );
         }
 
-        if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
+        if (error.code === 'rate_limit_exceeded' || error.message?.includes('rate limit')) {
             return NextResponse.json(
-                { error: 'Service temporarily unavailable. Please try again later.', details: 'Rate limit' },
+                { error: 'Muitas requisições. Aguarde um momento e tente novamente.' },
                 { status: 429 }
             );
         }
 
-        if (error.message?.includes('SAFETY') || error.message?.includes('blocked')) {
+        if (error.code === 'insufficient_quota') {
             return NextResponse.json(
-                { error: 'A mensagem foi bloqueada por questões de segurança. Tente reformular.', details: 'Safety filter' },
-                { status: 400 }
+                { error: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' },
+                { status: 503 }
             );
         }
 
-        // Return the actual error message for debugging
         return NextResponse.json(
-            {
-                error: 'Failed to process your message. Please try again.',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
-            },
+            { error: 'Desculpe, tive um problema ao processar sua mensagem. Por favor, tente novamente.' },
             { status: 500 }
         );
     }
