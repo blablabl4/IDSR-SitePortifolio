@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { redis } from '@/lib/kv';
 
 // System context about IDSR - COMPLETE BUSINESS CONTEXT v4 (Consultive Approach)
 const SYSTEM_CONTEXT = `
@@ -199,65 +201,146 @@ NUNCA:
 - Virar "robô técnico" ou interrogatório.
 `;
 
-export async function POST(req: NextRequest) {
+const RoleSchema = z.preprocess(
+    (value) => (value === 'bot' ? 'assistant' : value),
+    z.enum(['user', 'assistant'])
+);
+
+const ChatRequestSchema = z
+    .object({
+        message: z.string().trim().min(1).max(1000),
+        conversationHistory: z
+            .array(
+                z.object({
+                    role: RoleSchema,
+                    content: z.string().max(1000),
+                })
+            )
+            .max(20)
+            .optional()
+            .default([]),
+        userConsent: z.boolean().optional().default(false),
+    })
+    .refine(
+        (data) => data.conversationHistory.reduce((sum, m) => sum + m.content.length, 0) <= 8000,
+        { message: 'Histórico da conversa excede o limite permitido.' }
+    );
+
+const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const OPENAI_TIMEOUT_MS = 20_000;
+const GENERIC_ERROR = 'Desculpe, tive um problema ao processar sua mensagem. Por favor, tente novamente.';
+
+const memoryRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimitMemory(ip: string): { allowed: boolean; retryAfter: number } {
+    const now = Date.now();
+    const entry = memoryRateLimit.get(ip);
+
+    if (!entry || entry.resetAt <= now) {
+        memoryRateLimit.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_SECONDS * 1000 });
+        return { allowed: true, retryAfter: 0 };
+    }
+
+    entry.count += 1;
+    if (entry.count > RATE_LIMIT_MAX_REQUESTS) {
+        return { allowed: false, retryAfter: Math.ceil((entry.resetAt - now) / 1000) };
+    }
+
+    return { allowed: true, retryAfter: 0 };
+}
+
+async function checkRateLimit(ip: string): Promise<{ allowed: boolean; retryAfter: number }> {
     try {
-        const { message, conversationHistory, userConsent } = await req.json();
+        const key = `ratelimit:chat:${ip}`;
+        const count = await redis.incr(key);
 
-        // Validate consent
-        if (!userConsent) {
-            return NextResponse.json(
-                { error: 'Consent required. Please accept the terms to continue.' },
-                { status: 403 }
-            );
+        if (count === 1) {
+            await redis.expire(key, RATE_LIMIT_WINDOW_SECONDS);
         }
 
-        // Validate message
-        if (!message || typeof message !== 'string' || message.trim().length === 0) {
-            return NextResponse.json(
-                { error: 'Message is required' },
-                { status: 400 }
-            );
+        if (count > RATE_LIMIT_MAX_REQUESTS) {
+            const ttl = await redis.ttl(key);
+            return { allowed: false, retryAfter: ttl > 0 ? ttl : RATE_LIMIT_WINDOW_SECONDS };
         }
 
-        // Initialize OpenAI
-        const apiKey = process.env.OPENAI_API_KEY;
-        if (!apiKey) {
-            console.error('OPENAI_API_KEY is not configured');
-            return NextResponse.json(
-                { error: 'AI service is not configured. Please contact support.' },
-                { status: 503 }
-            );
-        }
+        return { allowed: true, retryAfter: 0 };
+    } catch {
+        return checkRateLimitMemory(ip);
+    }
+}
 
-        const openai = new OpenAI({ apiKey });
+function getClientIp(req: NextRequest): string {
+    const forwardedFor = req.headers.get('x-forwarded-for');
+    if (forwardedFor) {
+        return forwardedFor.split(',')[0].trim();
+    }
+    return 'unknown';
+}
 
-        // Build messages array for OpenAI
-        const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-            { role: 'system', content: SYSTEM_CONTEXT },
-        ];
+export async function POST(req: NextRequest) {
+    let body: unknown;
+    try {
+        body = await req.json();
+    } catch {
+        return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
+    }
 
-        // Add conversation history
-        if (conversationHistory && Array.isArray(conversationHistory)) {
-            for (const msg of conversationHistory) {
-                messages.push({
-                    role: msg.role === 'user' ? 'user' : 'assistant',
-                    content: msg.content || msg.text || '',
-                });
-            }
-        }
+    const parsed = ChatRequestSchema.safeParse(body);
+    if (!parsed.success) {
+        return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
+    }
 
-        // Add current user message
-        messages.push({ role: 'user', content: message });
+    const { message, conversationHistory, userConsent } = parsed.data;
 
-        // Call OpenAI API using GPT-4o-mini (optimized parameters)
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages,
-            max_tokens: 220,
-            temperature: 0.55,
-            frequency_penalty: 0.2,
-            presence_penalty: 0.1,
-        });
+    if (!userConsent) {
+        return NextResponse.json(
+            { error: 'Consent required. Please accept the terms to continue.' },
+            { status: 403 }
+        );
+    }
+
+    const ip = getClientIp(req);
+    const rateLimit = await checkRateLimit(ip);
+    if (!rateLimit.allowed) {
+        return NextResponse.json(
+            { error: 'Muitas requisições. Tente novamente mais tarde.' },
+            { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter) } }
+        );
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+        console.error('OPENAI_API_KEY is not configured');
+        return NextResponse.json(
+            { error: 'AI service is not configured. Please contact support.' },
+            { status: 503 }
+        );
+    }
+
+    const openai = new OpenAI({ apiKey });
+
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+        { role: 'system', content: SYSTEM_CONTEXT },
+        ...conversationHistory.map((msg) => ({ role: msg.role, content: msg.content }) as OpenAI.Chat.ChatCompletionMessageParam),
+        { role: 'user', content: message },
+    ];
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+
+    try {
+        const completion = await openai.chat.completions.create(
+            {
+                model: 'gpt-4o-mini',
+                messages,
+                max_tokens: 220,
+                temperature: 0.55,
+                frequency_penalty: 0.2,
+                presence_penalty: 0.1,
+            },
+            { signal: controller.signal }
+        );
 
         const text = completion.choices[0]?.message?.content || 'Desculpe, não consegui gerar uma resposta.';
 
@@ -265,37 +348,15 @@ export async function POST(req: NextRequest) {
             response: text,
             timestamp: new Date().toISOString(),
         });
+    } catch (error) {
+        if (controller.signal.aborted) {
+            console.error('Chat API timeout after', OPENAI_TIMEOUT_MS, 'ms');
+            return NextResponse.json({ error: 'Tempo de resposta excedido. Tente novamente.' }, { status: 504 });
+        }
 
-    } catch (error: any) {
         console.error('Chat API Error:', error);
-        console.error('Error name:', error?.name);
-        console.error('Error message:', error?.message);
-
-        // Handle specific OpenAI errors
-        if (error.code === 'invalid_api_key' || error.message?.includes('API key')) {
-            return NextResponse.json(
-                { error: 'AI service configuration error. Please contact support.' },
-                { status: 500 }
-            );
-        }
-
-        if (error.code === 'rate_limit_exceeded' || error.message?.includes('rate limit')) {
-            return NextResponse.json(
-                { error: 'Muitas requisições. Aguarde um momento e tente novamente.' },
-                { status: 429 }
-            );
-        }
-
-        if (error.code === 'insufficient_quota') {
-            return NextResponse.json(
-                { error: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' },
-                { status: 503 }
-            );
-        }
-
-        return NextResponse.json(
-            { error: 'Desculpe, tive um problema ao processar sua mensagem. Por favor, tente novamente.' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: GENERIC_ERROR }, { status: 500 });
+    } finally {
+        clearTimeout(timeout);
     }
 }

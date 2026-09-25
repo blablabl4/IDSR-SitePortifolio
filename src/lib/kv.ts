@@ -105,6 +105,14 @@ export const redis = {
     del: async (key: string) => {
         const client = await getRedisClient();
         return client.del(key);
+    },
+    incr: async (key: string) => {
+        const client = await getRedisClient();
+        return client.incr(key);
+    },
+    ttl: async (key: string) => {
+        const client = await getRedisClient();
+        return client.ttl(key);
     }
 };
 
