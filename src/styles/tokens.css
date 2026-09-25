@@ -1,0 +1,125 @@
+/* ==========================================================================
+   IDSR — Brand Identity System v3.0 (Liquid Glass + Aurora Nebula)
+   Regras Não Negociáveis:
+   1. Nunca usar Inter em nenhuma parte do projeto.
+   2. Fontes: JetBrains Mono (técnico/código), General Sans (leitura/corpo),
+      PP Neue Machina / Cabinet Grotesk (títulos e wordmark IDSR).
+   3. Base escura neutra #0a0a0b (sem tingimento azulado).
+   4. Aurora (#7c6cf6, #f472b6, #38e0e0, #fbbf24) visível apenas atrás do vidro
+      ou dentro do mundo do portfólio.
+   ========================================================================== */
+
+:root {
+  /* --- Base Neutra (Sem azul, fundo escuro profundo e puro) --- */
+  --color-bg-base: #0a0a0b;
+  --color-bg-surface: rgba(255, 255, 255, 0.05);
+  --color-bg-surface-hover: rgba(255, 255, 255, 0.08);
+  --color-bg-surface-active: rgba(255, 255, 255, 0.12);
+
+  /* --- Aurora Gradient (Energia interna que vive por trás do vidro) --- */
+  --color-aurora-violet: #7c6cf6;
+  --color-aurora-magenta: #f472b6;
+  --color-aurora-cyan: #38e0e0;
+  --color-aurora-amber: #fbbf24;
+  --gradient-aurora: linear-gradient(135deg, #7c6cf6 0%, #f472b6 50%, #38e0e0 100%);
+  --gradient-aurora-text: linear-gradient(90deg, #7c6cf6 0%, #38e0e0 100%);
+
+  /* --- Liquid Glass (Fundo a 8%, Borda a 20-30%, Specular highlight no topo) --- */
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.20);
+  --glass-border-top: rgba(255, 255, 255, 0.35);
+  --glass-border-hover: rgba(255, 255, 255, 0.45);
+  --glass-blur: 16px;
+
+  /* --- Tipografia Oficial (Três fontes com papéis estritos) --- */
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'General Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'PP Neue Machina', 'Cabinet Grotesk', system-ui, sans-serif;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.70);
+  --color-text-muted: rgba(255, 255, 255, 0.45);
+  --color-text-dim: rgba(255, 255, 255, 0.25);
+
+  /* --- Easing & Motion --- */
+  --ease-liquid: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 300ms;
+  --duration-normal: 500ms;
+  --duration-portal: 1200ms;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Utilitários Tipográficos Oficiais */
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+.font-sans {
+  font-family: var(--font-sans) !important;
+}
+
+.font-display {
+  font-family: var(--font-display) !important;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgba(124, 108, 246, 0.35);
+  color: #ffffff;
+}
+
+/* Utilitário Liquid Glass Master */
+.liquid-glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-top: 1px solid var(--glass-border-top);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  transition: all 0.4s var(--ease-liquid);
+}
+
+.liquid-glass:hover {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: var(--glass-border-hover);
+  border-top-color: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.7), 0 0 25px rgba(124, 108, 246, 0.18);
+}
+
+/* Painel de Vidro Líquido Especular */
+.liquid-glass-specular {
+  position: relative;
+  overflow: hidden;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-top: 1px solid var(--glass-border-top);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+.liquid-glass-specular::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  transition: transform 0.8s ease;
+}
+
+.liquid-glass-specular:hover::before {
+  transform: translateX(50%);
+}
+
+/* Aurora Text Gradient */
+.text-aurora {
+  background: var(--gradient-aurora-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
