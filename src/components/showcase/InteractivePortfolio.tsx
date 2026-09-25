@@ -12,9 +12,7 @@ import {
   Clock,
   ArrowRight,
   TrendingUp,
-  MessageSquare,
   Building2,
-  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';

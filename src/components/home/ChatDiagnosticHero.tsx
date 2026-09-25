@@ -12,7 +12,6 @@ import { useChatDiagnostic } from '@/hooks/useChatDiagnostic';
 export function ChatDiagnosticHero() {
   const {
     isExpanded,
-    setIsExpanded,
     inputValue,
     setInputValue,
     messages,

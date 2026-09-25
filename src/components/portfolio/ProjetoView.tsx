@@ -334,7 +334,7 @@ export function ProjetoView({ project }: ProjetoViewProps) {
             className="p-3.5 rounded-xl bg-black/40 border border-white/10 font-mono text-xs text-white/70"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            <span className="text-white/40 block mb-1">// PIPELINE DE DEPLOY:</span>
+            <span className="text-white/40 block mb-1">{'// PIPELINE DE DEPLOY:'}</span>
             <span className="text-[#38e0e0] font-semibold">{project.architecture.pipelineSummary}</span>
           </div>
 

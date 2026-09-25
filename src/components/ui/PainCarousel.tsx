@@ -118,7 +118,7 @@ export function PainCarousel({ items, autoPlayInterval = 4000, className }: Pain
                     >
                         {/* Pain */}
                         <p className="text-lg md:text-xl text-[#E7ECEF]/50 font-light mb-4 max-w-2xl italic">
-                            "{items[currentIndex].pain}"
+                            &quot;{items[currentIndex].pain}&quot;
                         </p>
                         {/* Solution */}
                         <p className="text-xl md:text-2xl font-extralight text-[#E7ECEF] max-w-2xl leading-relaxed">

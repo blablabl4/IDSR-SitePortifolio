@@ -13,7 +13,7 @@ import { NavigationHud } from './NavigationHud';
 import { IntroGenesisSplash } from './IntroGenesisSplash';
 
 export function SitePrincipalStage() {
-  const { currentSection, status, targetSection, hudRevealed, introExploded, isIntroGenesis, startGenesis } = useTransition();
+  const { currentSection, status, introExploded, isIntroGenesis, startGenesis } = useTransition();
   const [textReady, setTextReady] = useState(false);
 
   useEffect(() => {

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/Button';
 import { Segment, PainPoint, Impact, DataMaturity } from '@/types';
 
 // Updated StepWrapper for Dark Mode

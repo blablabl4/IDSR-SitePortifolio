@@ -260,7 +260,7 @@ export function QuemPodeUsarModal({ isOpen, onClose, defaultNichoId = 'saude' }:
                     <span className="font-mono text-[10px] tracking-widest uppercase text-[#38e0e0] font-bold">
                       QUEM PODE USAR
                     </span>
-                    <span className="text-[10px] font-mono text-white/40">// ARQUITETURA POR NICHO</span>
+                    <span className="text-[10px] font-mono text-white/40">{'// ARQUITETURA POR NICHO'}</span>
                   </div>
                   <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
                     Como Mesclar Soluções IDSR para o Seu Mercado
@@ -356,7 +356,7 @@ export function QuemPodeUsarModal({ isOpen, onClose, defaultNichoId = 'saude' }:
                 {/* Soluções Combinadas (O Stack Perfeito) */}
                 <div>
                   <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-white/50 block mb-2.5">
-                    // COMBINAÇÃO SINÉRGICA IDSR
+                    {'// COMBINAÇÃO SINÉRGICA IDSR'}
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {activeNicho.solucoesCombinadas.map((solucao, idx) => (
@@ -382,7 +382,7 @@ export function QuemPodeUsarModal({ isOpen, onClose, defaultNichoId = 'saude' }:
                 {/* Como Funciona na Prática */}
                 <div>
                   <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-white/50 block mb-2.5">
-                    // FLUXO OPERACIONAL NA PRÁTICA
+                    {'// FLUXO OPERACIONAL NA PRÁTICA'}
                   </span>
                   <div className="space-y-2">
                     {activeNicho.comoFunciona.map((passo, idx) => (

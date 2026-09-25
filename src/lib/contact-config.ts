@@ -31,7 +31,7 @@ export const CONTACT_CONFIG = {
 };
 
 export type WhatsAppContext = {
-  origem?: 'home' | 'produtos' | 'precos' | 'sobre' | 'contato' | 'manifesto' | 'suporte' | 'header';
+  origem?: 'home' | 'produtos' | 'precos' | 'sobre' | 'contato' | 'manifesto' | 'suporte' | 'header' | 'footer';
   produto?: 'pulse' | 'leadflow' | 'scheduleflow' | 'opsflow' | 'custom' | string;
   plano?: 'starter' | 'growth' | 'enterprise' | string;
   ticketId?: string;

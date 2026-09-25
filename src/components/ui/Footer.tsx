@@ -118,7 +118,7 @@ export function Footer() {
                     </p>
                     <div className="flex items-center gap-6">
                         <a
-                            href={getWhatsAppUrl({ origem: 'footer' as any })}
+                            href={getWhatsAppUrl({ origem: 'footer' })}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-[#0D7C66] hover:text-[#0F5A47] transition-colors font-mono font-medium flex items-center gap-1"

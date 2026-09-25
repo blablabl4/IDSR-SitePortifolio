@@ -2,27 +2,29 @@
 
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { User, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TypewriterEffect } from '@/components/ui/TypewriterEffect';
+
+export type SelectionValue = string | string[] | { units: number; team: number };
 
 export interface Message {
     id: string;
     role: 'bot' | 'user';
     text: string;
     type?: 'text' | 'options';
-    options?: { label: string; value: any }[];
+    options?: { label: string; value: SelectionValue }[];
 }
 
 interface ChatInterfaceProps {
     messages: Message[];
-    onOptionSelect: (value: any) => void;
+    onOptionSelect: (value: SelectionValue) => void;
     onTextSubmit?: (text: string) => void;
     isTyping?: boolean;
     onStartDiagnosis?: () => void;
 }
 
-export function ChatInterface({ messages, onOptionSelect, onTextSubmit, isTyping, onStartDiagnosis }: ChatInterfaceProps) {
+export function ChatInterface({ messages, onOptionSelect, isTyping, onStartDiagnosis }: ChatInterfaceProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {

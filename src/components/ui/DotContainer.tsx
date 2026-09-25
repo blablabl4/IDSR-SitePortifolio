@@ -12,7 +12,6 @@ export function DotContainer({ children, className }: DotContainerProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(true);
-    const mousePos = useRef({ x: -1000, y: -1000 }); // Initialize mouse position off-screen
     const animationId = useRef<number | undefined>(undefined);
 
     // Intersection Observer to pause when off-screen
@@ -90,7 +89,6 @@ export function DotContainer({ children, className }: DotContainerProps) {
                 const distFromCenter = Math.sqrt(dcx * dcx + dcy * dcy);
 
                 // Radial wave emanating from center
-                const waveSpeed = 200; // pixels per second
                 const waveFrequency = 0.01;
                 const radialWave = Math.sin(distFromCenter * waveFrequency - time * 2) * 0.6;
 

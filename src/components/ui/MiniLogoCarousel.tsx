@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface ClientLogo {
@@ -72,7 +72,7 @@ export function MiniLogoCarousel({
 
     return (
         <div className={cn("flex items-center justify-center md:justify-end gap-6", className)}>
-            {visibleLogos.map((logo, i) => {
+            {visibleLogos.map((logo) => {
                 const isHovered = hoveredIndex === logo.originalIndex;
 
                 return (

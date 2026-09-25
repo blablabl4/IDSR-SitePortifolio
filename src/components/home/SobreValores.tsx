@@ -122,7 +122,7 @@ export function SobreValores() {
                   className="font-mono text-[10px] text-[#7c6cf6] uppercase tracking-widest block mb-2"
                   style={{ fontFamily: 'var(--font-mono)' }}
                 >
-                  // PILAR 01
+                  {'// PILAR 01'}
                 </span>
                 <h3 className="font-sans font-bold text-white text-base mb-1.5">
                   Zero Código Descartável
@@ -145,7 +145,7 @@ export function SobreValores() {
                   className="font-mono text-[10px] text-[#38e0e0] uppercase tracking-widest block mb-2"
                   style={{ fontFamily: 'var(--font-mono)' }}
                 >
-                  // PILAR 02
+                  {'// PILAR 02'}
                 </span>
                 <h3 className="font-sans font-bold text-white text-base mb-1.5">
                   Auditoria & Telemetria Real

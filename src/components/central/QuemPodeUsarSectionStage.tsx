@@ -4,17 +4,13 @@ import React, { useState } from 'react';
 import { useTransition } from '@/context/TransitionContext';
 import { DustText } from '@/components/ui/DustText';
 import { getWhatsAppUrl } from '@/lib/contact-config';
-import { 
-  Stethoscope, 
-  ShoppingBag, 
-  Building2, 
-  Briefcase, 
-  UtensilsCrossed, 
-  Zap, 
-  Check, 
+import {
+  Stethoscope,
+  ShoppingBag,
+  Building2,
+  Briefcase,
+  UtensilsCrossed,
   MessageSquare,
-  ArrowRight,
-  TrendingUp,
   Cpu
 } from 'lucide-react';
 

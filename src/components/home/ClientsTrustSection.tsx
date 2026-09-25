@@ -14,7 +14,6 @@ function AnimatedMetric({
   prefix,
   suffix,
   label,
-  sublabel,
   description,
   icon: Icon,
 }: {

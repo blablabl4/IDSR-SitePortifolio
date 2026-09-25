@@ -5,18 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   GitBranch,
   Terminal,
-  Cpu,
   ShieldCheck,
   ExternalLink,
   Layers,
-  Sparkles,
   X,
   Play,
   CheckCircle2,
   Lock,
   ArrowRight,
   TrendingUp,
-  Code2,
   FolderGit2,
 } from 'lucide-react';
 import { GIT_PORTFOLIO_PROJECTS, GitProject } from '@/lib/git-portfolio-data';

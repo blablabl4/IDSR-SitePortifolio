@@ -25,8 +25,6 @@ export function DustText({
   as: Component = 'span',
   className = '',
   style = {},
-  accentColor = '#38e0e0',
-  glowColor,
   delay = 0,
   stagger = 20,
   mode = 'chars',
@@ -102,8 +100,6 @@ export function DustText({
       };
     });
   }, [text, mode]);
-
-  const effectiveGlow = glowColor || accentColor;
 
   return (
     <Component

@@ -5,7 +5,7 @@ import { useTransition } from '@/context/TransitionContext';
 import { DustText } from '@/components/ui/DustText';
 
 import { CONTACT_CONFIG, getWhatsAppUrl } from '@/lib/contact-config';
-import { MessageSquare, ArrowUpRight, Clock, ShieldCheck, Cpu, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, ArrowUpRight, Clock, ShieldCheck, Cpu } from 'lucide-react';
 
 export function ContatoRewindHud() {
   const { status } = useTransition();

@@ -1,20 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  NICHOS_DATA, 
-  NichoItem 
+import {
+  NICHOS_DATA,
+  NichoItem
 } from '@/components/central/QuemPodeUsarModal';
-import { 
-  Layers, 
-  Check, 
-  ArrowRight, 
-  MessageSquare, 
-  Zap, 
-  ShieldCheck,
-  TrendingUp,
-  SlidersHorizontal
+import {
+  Layers,
+  ArrowRight,
+  MessageSquare,
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 import { getWhatsAppUrl } from '@/lib/contact-config';
 
@@ -161,7 +157,7 @@ export function QuemPodeUsarSection() {
               {/* Stack Combinado */}
               <div>
                 <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-white/50 block mb-3">
-                  // STACK DE SOLUÇÕES RECOMENDADO
+                  {'// STACK DE SOLUÇÕES RECOMENDADO'}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {activeNicho.solucoesCombinadas.map((sol, idx) => (
@@ -185,7 +181,7 @@ export function QuemPodeUsarSection() {
               {/* Fluxo na Prática */}
               <div>
                 <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-white/50 block mb-3">
-                  // COMO AS SOLUÇÕES TRABALHAM JUNTAS
+                  {'// COMO AS SOLUÇÕES TRABALHAM JUNTAS'}
                 </span>
                 <div className="space-y-2.5">
                   {activeNicho.comoFunciona.map((step, idx) => (

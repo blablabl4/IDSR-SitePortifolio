@@ -171,7 +171,7 @@ export function LiquidSectionDivider({
           className="text-[9px] font-mono tracking-[0.25em] text-white/40 uppercase bg-[#0a0a0b]/80 px-2.5 py-0.5 rounded-full border border-white/10 backdrop-blur-md"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          {sectionNumber} // {sectionTitle}
+          {`${sectionNumber} // ${sectionTitle}`}
         </span>
       </div>
     </div>

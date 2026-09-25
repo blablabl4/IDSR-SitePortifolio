@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAssessor } from './useAssessor';
-import { Message } from '@/components/chat/ChatInterface';
+import { Message, SelectionValue } from '@/components/chat/ChatInterface';
+import { Segment, PainPoint, Impact, DataMaturity } from '@/types';
 
 export function useChatAssessor() {
     const assessor = useAssessor();
@@ -61,7 +62,7 @@ export function useChatAssessor() {
         }
     }, [messages, assessor.state.step, hasStarted]);
 
-    const addBotMessage = (text: string, type: 'text' | 'options' = 'text', options: any[] = []) => {
+    const addBotMessage = (text: string, type: 'text' | 'options' = 'text', options: { label: string; value: SelectionValue }[] = []) => {
         const id = Math.random().toString(36).substr(2, 9);
         setMessages(prev => [...prev, { id, role: 'bot', text, type, options }]);
     };
@@ -139,7 +140,7 @@ export function useChatAssessor() {
         }
     };
 
-    const handleSelection = (value: any) => {
+    const handleSelection = (value: SelectionValue) => {
         // 1. Add User Message
         let label = "Selecionado";
         const lastBotMsg = messages.filter(m => m.role === 'bot').pop();
@@ -153,19 +154,20 @@ export function useChatAssessor() {
         const currStep = assessor.state.step;
 
         if (currStep === 'start' || currStep === 'segment') {
-            assessor.setSegment(value);
+            assessor.setSegment(value as Segment);
         } else if (currStep === 'size') {
-            assessor.setSize(value.units, value.team);
+            const size = value as { units: number; team: number };
+            assessor.setSize(size.units, size.team);
         } else if (currStep === 'pain') {
-            assessor.setPain(value);
+            assessor.setPain(value as PainPoint);
         } else if (currStep === 'impact') {
-            assessor.setImpact(value);
+            assessor.setImpact(value as Impact);
         } else if (currStep === 'channels') {
-            assessor.setChannels(value);
+            assessor.setChannels(value as string[]);
         } else if (currStep === 'tools') {
-            assessor.setTools(value);
+            assessor.setTools(value as string[]);
         } else if (currStep === 'data_maturity') {
-            assessor.setDataMaturity(value);
+            assessor.setDataMaturity(value as DataMaturity);
         } else if (currStep === 'results') {
             if (value === 'ACTION_BOOK') {
                 window.open('https://cal.com/idsr', '_blank');

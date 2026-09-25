@@ -9,7 +9,7 @@ interface Props {
     initialUserMessage?: string | null;
 }
 
-export function AssessmentContainer({ isExpanded, initialUserMessage }: Props) {
+export function AssessmentContainer({ initialUserMessage }: Props) {
     const { messages, isTyping, handleSelection, startDiagnosis, handleUserText } = useChatAssessor();
 
     // Handle Initial Message from Home Input
