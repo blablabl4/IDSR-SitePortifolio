@@ -11,7 +11,6 @@ class MockIntersectionObserver implements IntersectionObserver {
 
   constructor(
     private callback: IntersectionObserverCallback,
-    _options?: IntersectionObserverInit,
   ) {
     // auto-trigger on next tick so observed elements appear "in view"
     setTimeout(() => {
