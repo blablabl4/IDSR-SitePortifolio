@@ -86,7 +86,7 @@ export const redis = {
         const client = await getRedisClient();
         return client.zIncrBy(key, increment, member);
     },
-    zrange: async (key: string, start: number, stop: number, options?: any) => {
+    zrange: async (key: string, start: number, stop: number, options?: { rev?: boolean }) => {
         const client = await getRedisClient();
         return client.zRangeWithScores(key, start, stop, { REV: options?.rev });
     },

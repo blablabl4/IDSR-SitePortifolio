@@ -6,8 +6,6 @@ import { useTransition } from '@/context/TransitionContext';
 import {
   blockVertexShader,
   blockFragmentShader,
-  particleVertexShader,
-  particleFragmentShader,
   edgeRefractionVertexShader,
   edgeRefractionFragmentShader,
 } from './ParticleEngineShader';
@@ -100,7 +98,6 @@ export function ParticleSceneCanvas() {
     });
 
     const postScene = new THREE.Scene();
-    const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const postMaterial = new THREE.ShaderMaterial({
       vertexShader: edgeRefractionVertexShader,
       fragmentShader: edgeRefractionFragmentShader,
@@ -306,7 +303,7 @@ export function ParticleSceneCanvas() {
       side: THREE.FrontSide,
     });
 
-    (window as any).__blockMaterial = blockMaterial;
+    (window as unknown as { __blockMaterial: typeof blockMaterial }).__blockMaterial = blockMaterial;
 
     const blockMesh = new THREE.Mesh(instancedGeometry, blockMaterial);
     scene.add(blockMesh);
