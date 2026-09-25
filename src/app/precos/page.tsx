@@ -4,77 +4,94 @@ import React from 'react';
 import { GlassHeader } from '@/components/ui/GlassHeader';
 import { GlassSection } from '@/components/ui/GlassSection';
 import { Footer } from '@/components/ui/Footer';
-import { Check } from 'lucide-react';
+import { Check, ArrowRight, MessageSquare, ShieldCheck, Zap } from 'lucide-react';
+import { getWhatsAppUrl } from '@/lib/contact-config';
 
 export default function PrecosPage() {
     const plans = [
         {
-            name: 'Inicial',
-            price: 'Sob consulta',
-            description: 'Para empresas começando a automatizar',
+            id: 'starter',
+            name: 'Starter',
+            badge: 'Essencial para Começar',
+            price: 'R$ 997',
+            period: '/mês',
+            description: 'Para empresas que perdem vendas fora do horário e precisam de atendimento imediato 24/7.',
             features: [
-                '1 produto à escolha',
-                'Até 1.000 contatos/mês',
-                'Suporte por email',
-                'Onboarding guiado',
-                'Integrações básicas'
+                '1 Solução IDSR (Automação Comercial 24/7 no WhatsApp ou Robô de Dados)',
+                'Até 1.500 conversas ativas/mês no WhatsApp',
+                'Qualificação automática de leads com triagem de perfil',
+                'Notificação imediata para equipe no celular',
+                'Onboarding assistido e ativação em até 7 dias úteis',
+                'Suporte técnico via WhatsApp (SLA 8h úteis)',
+                'Garantia de estabilidade e uptime 99.9%'
             ],
-            cta: 'Começar',
+            cta: 'Contratar Plano Starter',
             highlight: false
         },
         {
-            name: 'Crescimento',
-            price: 'Sob consulta',
-            description: 'Para operações em expansão',
+            id: 'growth',
+            name: 'Growth',
+            badge: 'Mais Escolhido para Escala',
+            price: 'R$ 1.997',
+            period: '/mês',
+            description: 'A máquina completa para quem investe em tráfego pago, precisa de follow-up implacável e zero no-show.',
             features: [
-                'Até 3 produtos',
-                'Até 5.000 contatos/mês',
-                'Suporte prioritário',
-                'Customizações leves',
-                'Integrações avançadas',
-                'Relatórios personalizados'
+                'Stack Integrado: Automação 24/7 + Agente de IA com RAG + Dashboard Analítico',
+                'Volume de até 6.000 conversas ativas/mês',
+                'Régua ativa de follow-up para orçamentos e leads parados',
+                'Confirmação automática de agendamentos (reduz no-show em até 80%)',
+                'Integrações com Google Sheets, Webhooks e CRM atual',
+                'Suporte prioritário diretamente com engenheiro (SLA 4h úteis)',
+                'Painel executivo com métricas em tempo real de faturamento e conversão'
             ],
-            cta: 'Falar com time',
+            cta: 'Escalar com Plano Growth',
             highlight: true
         },
         {
-            name: 'Empresa',
-            price: 'Custom',
-            description: 'Para operações complexas',
+            id: 'enterprise',
+            name: 'Enterprise',
+            badge: 'Arquitetura Dedicada',
+            price: 'Sob Blueprint',
+            period: 'Escopo customizado',
+            description: 'Para operações complexas que demandam integração com ERPs legados, alta concorrência e governança.',
             features: [
-                'Todos os produtos',
-                'Volume ilimitado',
-                'Suporte dedicado',
-                'SLA garantido',
-                'Desenvolvimento sob medida',
-                'Governança e compliance',
-                'Gerente de conta'
+                'Todos os 5 pilares IDSR: Automações + Agentes IA + Robôs RPA + Sistemas Sob Medida',
+                'Volume de conversas ilimitado e alta vazão para grandes volumes',
+                'Integração dedicada com ERPs (Bling, Tiny, Omie, TOTVS, SAP)',
+                'Agentes de IA com guardrails avançados e regras de negócio proprietárias',
+                'SLA contratual garantido com canal direto de emergência',
+                'Treinamento de equipe e documentação técnica completa',
+                'Acompanhamento de arquitetura e performance com engenheiro sênior'
             ],
-            cta: 'Agendar conversa',
+            cta: 'Solicitar Blueprint Dedicado',
             highlight: false
         }
     ];
 
     const faqs = [
         {
-            question: 'Como funciona o preço?',
-            answer: 'Personalizamos a proposta conforme volume, produtos escolhidos e necessidade de customização. Entre em contato para um orçamento preciso.'
+            question: 'Em quanto tempo a automação começa a rodar na minha empresa?',
+            answer: 'Nos planos Starter e Growth, o onboarding e ativação ocorrem entre 5 e 10 dias úteis. No plano Enterprise, definimos um cronograma ágil por marcos de entrega para colocar a primeira versão no ar o mais rápido possível.'
         },
         {
-            question: 'Tem período de teste?',
-            answer: 'Oferecemos diagnóstico gratuito e demonstração completa. O período de teste pode ser negociado conforme o projeto.'
+            question: 'Preciso trocar o número de WhatsApp que minha empresa já usa?',
+            answer: 'Não! Nós conectamos a automação diretamente ao seu número comercial atual. Você não perde nenhum contato, histórico ou cliente da sua base.'
+        },
+        {
+            question: 'E se minha equipe não tiver conhecimento técnico para mexer?',
+            answer: 'A IDSR foi construída exatamente para eliminar a complexidade. Sua equipe utiliza ferramentas limpas e intuitivas, e nós entregamos todo o treinamento prático e suporte para que todos se sintam seguros desde o primeiro dia.'
+        },
+        {
+            question: 'O que acontece quando um cliente faz uma pergunta complexa que a IA não sabe responder?',
+            answer: 'Nossos agentes contam com guardrails rígidos anti-alucinação. Quando uma dúvida foge ao escopo ou exige negociação humana, a conversa é transbordada suavemente para o atendente responsável, acompanhada de um resumo do histórico do lead.'
+        },
+        {
+            question: 'Como funciona o contrato? Tem fidelidade ou multa de cancelamento?',
+            answer: 'Trabalhamos com transparência radical. Nossos contratos padrão têm ciclos mensais ou semestrais claros, sem letras miúdas ou pegadinhas. Conquistamos a permanência dos nossos clientes pela estabilidade do software e pelo aumento de receita entregue.'
         },
         {
             question: 'Posso começar com um produto e adicionar outros depois?',
-            answer: 'Sim! Nossa estrutura é modular. Você pode começar com um produto e expandir conforme a operação cresce.'
-        },
-        {
-            question: 'Tem taxa de setup?',
-            answer: 'Depende da complexidade. Projetos padrão podem ter taxa única de onboarding. Projetos custom incluem blueprint e setup no escopo.'
-        },
-        {
-            question: 'Como funciona o suporte?',
-            answer: 'Planos Inicial têm suporte por email (até 48h). Crescimento tem suporte prioritário. Empresa tem suporte dedicado com SLA.'
+            answer: 'Com certeza! Toda a infraestrutura da IDSR é modular. Você pode começar resolvendo o atendimento inicial no WhatsApp e, conforme o tráfego e as vendas aumentarem, plugar o CRM, a agenda e as integrações de ERP.'
         }
     ];
 
@@ -87,14 +104,14 @@ export default function PrecosPage() {
                 <div className="max-w-4xl mx-auto text-center">
                     <div className="inline-block px-4 py-2 bg-[#0f0f0f]/80 backdrop-blur-md border border-[#2a2a2a]/50 rounded-lg mb-6">
                         <p className="text-[10px] uppercase tracking-[0.3em] text-[#0B3B2E] font-medium">
-                            Preços
+                            Investimento & Planos
                         </p>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-extralight text-[#E7ECEF] mb-6">
-                        Transparência total
+                        Planos Transparentes, Retorno Imediato
                     </h1>
-                    <p className="text-sm text-[#E7ECEF]/50 max-w-2xl mx-auto">
-                        Preços personalizados conforme volume e produtos. Sem surpresas, sem taxa escondida.
+                    <p className="text-sm text-[#E7ECEF]/50 max-w-2xl mx-auto leading-relaxed">
+                        Elimine o custo oculto de leads perdidos por demora no atendimento e processos manuais. Escolha o plano ideal para a escala da sua empresa.
                     </p>
                 </div>
             </section>
@@ -103,43 +120,88 @@ export default function PrecosPage() {
             <GlassSection className="py-16">
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {plans.map((plan, index) => (
+                        {plans.map((plan) => (
                             <div
-                                key={index}
-                                className={`rounded-2xl p-8 flex flex-col h-full ${plan.highlight
-                                    ? 'bg-[#0D7C66]/10 border-2 border-[#0D7C66]/60'
-                                    : 'bg-[#111111] border border-[#2a2a2a]'
+                                key={plan.id}
+                                className={`rounded-2xl p-8 flex flex-col h-full relative transition-all ${plan.highlight
+                                    ? 'bg-[#0D7C66]/10 border-2 border-[#0D7C66]/60 shadow-2xl shadow-[#0D7C66]/15'
+                                    : 'bg-[#111111] border border-[#2a2a2a] hover:border-[#2a2a2a]/70'
                                     }`}
                             >
-                                {plan.highlight && (
-                                    <div className="inline-block px-3 py-1 bg-[#0D7C66]/20 border border-[#0D7C66]/30 rounded-full text-[10px] uppercase tracking-wide text-[#0D7C66] mb-4">
-                                        Mais popular
-                                    </div>
-                                )}
-                                <h3 className="text-2xl font-light text-[#E7ECEF] mb-2">{plan.name}</h3>
-                                <p className="text-3xl font-extralight text-[#E7ECEF] mb-4">{plan.price}</p>
-                                <p className="text-sm text-[#E7ECEF]/50 mb-8">{plan.description}</p>
+                                <div className="mb-4">
+                                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-wide font-medium ${
+                                        plan.highlight 
+                                            ? 'bg-[#0D7C66]/20 border border-[#0D7C66]/40 text-[#0D7C66]' 
+                                            : 'bg-[#1a1a1a] border border-[#2a2a2a] text-[#E7ECEF]/60'
+                                    }`}>
+                                        {plan.badge}
+                                    </span>
+                                </div>
 
-                                <ul className="space-y-3 mb-8">
-                                    {plan.features.map((feature, i) => (
-                                        <li key={i} className="flex items-start gap-3 text-sm text-[#E7ECEF]/60">
-                                            <Check className="w-4 h-4 text-[#0D7C66] mt-0.5 shrink-0" />
-                                            {feature}
-                                        </li>
-                                    ))}
-                                </ul>
+                                <h3 className="text-2xl font-light text-[#E7ECEF] mb-2">{plan.name}</h3>
+                                
+                                <div className="flex items-baseline gap-1.5 mb-4">
+                                    <span className="text-3xl sm:text-4xl font-extralight text-[#E7ECEF]">{plan.price}</span>
+                                    <span className="text-xs text-[#E7ECEF]/40">{plan.period}</span>
+                                </div>
+
+                                <p className="text-sm text-[#E7ECEF]/60 mb-8 min-h-[48px] leading-relaxed">
+                                    {plan.description}
+                                </p>
+
+                                <div className="border-t border-[#2a2a2a] pt-6 mb-8 flex-1">
+                                    <p className="text-xs uppercase tracking-wider text-[#E7ECEF]/40 font-medium mb-4">
+                                        O que está incluso:
+                                    </p>
+                                    <ul className="space-y-3">
+                                        {plan.features.map((feature, i) => (
+                                            <li key={i} className="flex items-start gap-3 text-sm text-[#E7ECEF]/70">
+                                                <Check className="w-4 h-4 text-[#0D7C66] mt-0.5 shrink-0" />
+                                                <span className="leading-snug">{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
 
                                 <a
-                                    href="/"
-                                    className={`block w-full px-6 py-3 rounded-xl text-sm font-medium text-center transition-all mt-auto ${plan.highlight
+                                    href={getWhatsAppUrl({ origem: 'precos', plano: plan.id })}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`w-full px-6 py-3.5 rounded-xl text-sm font-medium text-center transition-all mt-auto flex items-center justify-center gap-2 group cursor-pointer ${plan.highlight
                                         ? 'bg-[#0D7C66] text-[#E7ECEF] hover:bg-[#0F5A47] shadow-lg shadow-[#0D7C66]/30'
                                         : 'bg-[#1a1a1a] text-[#E7ECEF] hover:bg-[#2a2a2a] border border-[#2a2a2a]'
                                         }`}
                                 >
-                                    {plan.cta}
+                                    <span>{plan.cta}</span>
+                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </a>
                             </div>
                         ))}
+                    </div>
+
+                    {/* Guarantees Box */}
+                    <div className="mt-12 p-6 rounded-2xl bg-[#111111]/80 border border-[#2a2a2a] grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
+                        <div className="flex items-center gap-3 justify-center md:justify-start">
+                            <ShieldCheck className="w-6 h-6 text-[#0D7C66] shrink-0" />
+                            <div>
+                                <h4 className="text-sm font-medium text-[#E7ECEF]">Onboarding Assistido</h4>
+                                <p className="text-xs text-[#E7ECEF]/50">Configuramos e testamos tudo com você</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 justify-center md:justify-start">
+                            <Zap className="w-6 h-6 text-[#0D7C66] shrink-0" />
+                            <div>
+                                <h4 className="text-sm font-medium text-[#E7ECEF]">Ativação Rápida</h4>
+                                <p className="text-xs text-[#E7ECEF]/50">Seu sistema rodando em dias, não meses</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 justify-center md:justify-start">
+                            <MessageSquare className="w-6 h-6 text-[#0D7C66] shrink-0" />
+                            <div>
+                                <h4 className="text-sm font-medium text-[#E7ECEF]">Suporte com Engenheiro</h4>
+                                <p className="text-xs text-[#E7ECEF]/50">Atendimento direto com quem constrói</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </GlassSection>
@@ -147,19 +209,23 @@ export default function PrecosPage() {
             {/* FAQ Section */}
             <section className="py-20 px-6">
                 <div className="max-w-4xl mx-auto">
-                    <h2 className="text-3xl font-extralight text-[#E7ECEF] mb-12 text-center">
-                        Perguntas frequentes
+                    <h2 className="text-3xl font-extralight text-[#E7ECEF] mb-4 text-center">
+                        Perguntas Frequentes
                     </h2>
-                    <div className="space-y-6">
+                    <p className="text-sm text-[#E7ECEF]/50 text-center mb-12 max-w-xl mx-auto">
+                        Tire suas dúvidas sobre implantação, tecnologia e funcionamento prático da IDSR.
+                    </p>
+                    <div className="space-y-4">
                         {faqs.map((faq, index) => (
                             <div
                                 key={index}
-                                className="bg-[#111111] border border-[#2a2a2a] rounded-xl p-6"
+                                className="bg-[#111111] border border-[#2a2a2a] rounded-xl p-6 hover:border-[#2a2a2a]/80 transition-colors"
                             >
-                                <h3 className="text-lg font-light text-[#E7ECEF] mb-3">
+                                <h3 className="text-base font-light text-[#E7ECEF] mb-3 flex items-start gap-2">
+                                    <span className="text-[#0D7C66] font-mono font-bold text-sm">0{index + 1}.</span>
                                     {faq.question}
                                 </h3>
-                                <p className="text-sm text-[#E7ECEF]/60 leading-relaxed">
+                                <p className="text-sm text-[#E7ECEF]/60 leading-relaxed pl-6">
                                     {faq.answer}
                                 </p>
                             </div>
@@ -168,21 +234,33 @@ export default function PrecosPage() {
                 </div>
             </section>
 
-            {/* CTA Section */}
-            <section className="py-20 px-6 text-center">
+            {/* Bottom CTA Section */}
+            <section className="py-20 px-6 text-center border-t border-[#1a1a1a]">
                 <div className="max-w-2xl mx-auto">
                     <h3 className="text-2xl font-extralight text-[#E7ECEF] mb-4">
-                        Ainda com dúvidas?
+                        Ainda com dúvidas sobre o melhor plano?
                     </h3>
-                    <p className="text-sm text-[#E7ECEF]/50 mb-8">
-                        Vamos montar uma proposta personalizada para sua operação.
+                    <p className="text-sm text-[#E7ECEF]/50 mb-8 leading-relaxed">
+                        Faça um diagnóstico operacional gratuito com o Rocha e descubra qual modelo traz o maior retorno financeiro para o momento da sua empresa.
                     </p>
-                    <a
-                        href="/"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-[#0D7C66] text-[#E7ECEF] rounded-xl text-sm font-medium hover:bg-[#0F5A47] transition-all shadow-lg shadow-[#0D7C66]/20"
-                    >
-                        Começar diagnóstico
-                    </a>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <a
+                            href={getWhatsAppUrl({ origem: 'precos', customMessage: 'Olá Rocha! Gostaria de um diagnóstico rápido para saber qual plano da IDSR faz mais sentido para minha operação.' })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-6 py-3.5 bg-[#0D7C66] text-[#E7ECEF] rounded-xl text-sm font-medium hover:bg-[#0F5A47] transition-all shadow-lg shadow-[#0D7C66]/20 cursor-pointer"
+                        >
+                            <MessageSquare className="w-4 h-4" />
+                            Falar com Rocha no WhatsApp
+                        </a>
+                        <a
+                            href="/contato"
+                            className="inline-flex items-center gap-2 px-6 py-3.5 bg-[#1a1a1a] border border-[#2a2a2a] text-[#E7ECEF] rounded-xl text-sm font-medium hover:bg-[#252525] transition-all"
+                        >
+                            Solicitar diagnóstico no site
+                            <ArrowRight className="w-4 h-4" />
+                        </a>
+                    </div>
                 </div>
             </section>
 

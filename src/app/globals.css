@@ -1,4 +1,7 @@
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@200,300,400,500,600,700&f[]=cabinet-grotesk@700,800,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
 :root {
   /* Brand Constants from Doc 02 + User Override */
@@ -7,23 +10,15 @@
 
   /* Extended Color Palette */
   --accent-forest: #0B3B2E;
-  /* Primary - Dark Green */
   --accent-forest-light: #0F5A47;
-  /* Lighter variant */
   --accent-forest-dark: #061E17;
-  /* Darker variant */
 
   --accent-teal: #0D7C66;
-  /* Secondary accent - Teal */
   --accent-gold: #B8956A;
-  /* Tertiary accent - Muted Gold */
 
   --neutral-800: #1a1a1a;
-  /* Borders, subtle elements */
   --neutral-700: #2a2a2a;
-  /* Slightly lighter */
   --neutral-600: #3a3a3a;
-  /* Mid-tone */
 
   /* Semantic Variables */
   --background: var(--bg-obsidian);
@@ -32,19 +27,60 @@
   --primary-foreground: #FFFFFF;
 }
 
+/* ─── Base Styles ─── */
+html {
+  scroll-behavior: smooth;
+  overflow: hidden;
+  height: 100dvh;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  /* Placeholder for Inter/Satoshi */
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  height: 100dvh;
 }
 
-/* Logo Carousel Animation */
+/* ─── Custom Scrollbar (Dark Luxury) ─── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 8px;
+  border: 2px solid #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a #0a0a0a;
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(13, 124, 102, 0.4);
+  color: #fff;
+}
+
+/* ─── Logo Carousel Animation ─── */
 @keyframes scroll {
   0% {
     transform: translateX(0);
   }
-
   100% {
     transform: translateX(-33.333%);
   }
@@ -58,14 +94,14 @@ body {
   animation-play-state: paused;
 }
 
-/* Text protection from dot background */
+/* ─── Text Protection from Dot Background ─── */
 .text-protected {
   position: relative;
   z-index: 20;
   text-shadow: 0 0 20px rgba(10, 10, 10, 0.8);
 }
 
-/* Section title glow effect when in view */
+/* ─── Section Title Glow ─── */
 .section-title {
   filter: brightness(0.7);
   transition: all 0.6s ease-out;
@@ -78,4 +114,73 @@ body {
     0 0 20px rgba(184, 149, 106, 0.4),
     0 0 30px rgba(184, 149, 106, 0.2);
   transform: scale(1.05);
+}
+
+/* ─── Ambient Glow Pulse (Hero Aura) ─── */
+@keyframes aura-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.aura-glow {
+  animation: aura-pulse 6s ease-in-out infinite;
+}
+
+/* ─── Gradient Border Animation ─── */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-border-animated {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* ─── Focus Visible (Accessibility) ─── */
+:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Tabular Numbers for Counters ─── */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── HUD Navigation Slide-In ─── */
+@keyframes hudSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes hudSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
 }
