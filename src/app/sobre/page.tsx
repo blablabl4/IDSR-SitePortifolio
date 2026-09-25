@@ -4,7 +4,7 @@ import React from 'react';
 import { GlassHeader } from '@/components/ui/GlassHeader';
 import { GlassSection } from '@/components/ui/GlassSection';
 import { Footer } from '@/components/ui/Footer';
-import { Target, Rocket, Shield, Users, ArrowRight, MessageSquare, Code2, CheckCircle2 } from 'lucide-react';
+import { Target, Rocket, Shield, Users, ArrowRight, MessageSquare, Code2 } from 'lucide-react';
 import { CONTACT_CONFIG, getWhatsAppUrl } from '@/lib/contact-config';
 
 export default function SobrePage() {

@@ -14,7 +14,6 @@ import {
   ArrowRight, 
   Zap,
   ShieldCheck,
-  TrendingUp,
   Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -292,7 +291,7 @@ export default function ProdutosPage() {
                                                 {/* Description */}
                                                 <div>
                                                     <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-white/50 mb-2">
-                                                        // VISÃO GERAL DA SOLUÇÃO
+                                                        {'// VISÃO GERAL DA SOLUÇÃO'}
                                                     </h3>
                                                     <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
                                                         {product.detailedDescription}
@@ -302,7 +301,7 @@ export default function ProdutosPage() {
                                                 {/* Features */}
                                                 <div>
                                                     <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-white/50 mb-3">
-                                                        // ENTREGÁVEIS & RECURSOS
+                                                        {'// ENTREGÁVEIS & RECURSOS'}
                                                     </h3>
                                                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                                                         {product.features.map((feature, i) => (
@@ -317,7 +316,7 @@ export default function ProdutosPage() {
                                                 {/* Use Cases */}
                                                 <div>
                                                     <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-white/50 mb-3">
-                                                        // CASOS DE APLICAÇÃO IMEDIATA
+                                                        {'// CASOS DE APLICAÇÃO IMEDIATA'}
                                                     </h3>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {product.useCases.map((useCase, i) => (
@@ -332,7 +331,7 @@ export default function ProdutosPage() {
                                                 {/* Integrations */}
                                                 <div>
                                                     <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-white/50 mb-3">
-                                                        // COMPATIBILIDADE & INTEGRAÇÕES
+                                                        {'// COMPATIBILIDADE & INTEGRAÇÕES'}
                                                     </h3>
                                                     <div className="flex flex-wrap gap-2">
                                                         {product.integrations.map((integration, i) => (

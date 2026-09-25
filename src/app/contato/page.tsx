@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { GlassHeader } from '@/components/ui/GlassHeader';
 import { GlassSection } from '@/components/ui/GlassSection';
 import { Footer } from '@/components/ui/Footer';
-import { Mail, Phone, MapPin, Send, CheckCircle2, MessageSquare, AlertCircle, Loader2, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
+import { Phone, MapPin, Send, CheckCircle2, MessageSquare, AlertCircle, Loader2, ArrowRight, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONTACT_CONFIG, getWhatsAppUrl } from '@/lib/contact-config';
 
@@ -54,9 +54,10 @@ export default function ContatoPage() {
                 segmento: 'varejo',
                 mensagem: ''
             });
-        } catch (err: any) {
+        } catch (err) {
             console.error('Submission error:', err);
-            setErrorMessage(err.message || 'Falha na conexão. Por favor, tente novamente ou fale pelo WhatsApp.');
+            const message = err instanceof Error ? err.message : undefined;
+            setErrorMessage(message || 'Falha na conexão. Por favor, tente novamente ou fale pelo WhatsApp.');
             setStatus('error');
         }
     };

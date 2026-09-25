@@ -4,7 +4,7 @@ import React from 'react';
 import { GlassHeader } from '@/components/ui/GlassHeader';
 import { GlassSection } from '@/components/ui/GlassSection';
 import { Footer } from '@/components/ui/Footer';
-import { Shield, Mail, FileText, Lock, Users, ShieldCheck, Cookie, Globe, Database, UserX, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Shield, Mail, FileText, Lock, Users, ShieldCheck, Cookie, Globe, Database, UserX, RefreshCw } from 'lucide-react';
 
 export default function PrivacidadePage() {
     return (
@@ -23,7 +23,7 @@ export default function PrivacidadePage() {
                         Política de Privacidade
                     </h1>
                     <p className="text-sm text-[#E7ECEF]/50 max-w-2xl mx-auto">
-                        Esta Política explica como coletamos, usamos, compartilhamos e protegemos dados pessoais ao utilizar nosso site e/ou plataforma ("Serviços"), conforme a Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).
+                        Esta Política explica como coletamos, usamos, compartilhamos e protegemos dados pessoais ao utilizar nosso site e/ou plataforma (&quot;Serviços&quot;), conforme a Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).
                     </p>
                     <p className="text-xs text-[#E7ECEF]/30 mt-4">
                         Última atualização: Dezembro de 2025
@@ -228,7 +228,7 @@ export default function PrivacidadePage() {
                                 Para exercer seus direitos: <a href="mailto:privacidade@idsr.com.br" className="text-[#0D7C66] hover:text-[#0F5A47] transition-colors">privacidade@idsr.com.br</a>
                             </p>
                             <p className="text-xs">
-                                Assunto sugerido: "LGPD – Solicitação do Titular".
+                                Assunto sugerido: &quot;LGPD – Solicitação do Titular&quot;.
                             </p>
                         </div>
                     </div>

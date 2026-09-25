@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     let persisted = false;
     try {
       if (process.env.REDIS_URL || process.env.KV_REST_API_URL) {
-        await redis.hset(`lead:${ticketId}`, leadRecord as any);
+        await redis.hset(`lead:${ticketId}`, leadRecord as unknown as Record<string, string>);
         await redis.lpush('leads:recent', ticketId);
         persisted = true;
       }
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Contact API Error]', error);
     return NextResponse.json(
       { error: 'Erro interno ao processar sua solicitação. Tente novamente mais tarde.' },

@@ -4,8 +4,8 @@ import React from 'react';
 import { GlassHeader } from '@/components/ui/GlassHeader';
 import { GlassSection } from '@/components/ui/GlassSection';
 import { Footer } from '@/components/ui/Footer';
-import { LifeBuoy, Phone, Mail, Clock, ShieldCheck, Activity, AlertCircle, ArrowRight, MessageSquare, CheckCircle2 } from 'lucide-react';
-import { CONTACT_CONFIG, getWhatsAppUrl } from '@/lib/contact-config';
+import { Phone, Clock, ShieldCheck, ArrowRight, MessageSquare } from 'lucide-react';
+import { getWhatsAppUrl } from '@/lib/contact-config';
 
 export default function SuportePage() {
     const slas = [

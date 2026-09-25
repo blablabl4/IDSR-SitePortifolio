@@ -23,7 +23,7 @@ export default function TermosPage() {
                         Termos de Uso
                     </h1>
                     <p className="text-sm text-[#E7ECEF]/50 max-w-2xl mx-auto">
-                        Condições gerais para acesso e uso do site e/ou plataforma IDSR ("Serviços"). Leia atentamente antes de utilizar.
+                        Condições gerais para acesso e uso do site e/ou plataforma IDSR (&quot;Serviços&quot;). Leia atentamente antes de utilizar.
                     </p>
                     <p className="text-xs text-[#E7ECEF]/30 mt-4">
                         Última atualização: Dezembro de 2025
@@ -211,7 +211,7 @@ export default function TermosPage() {
                         </div>
                         <div className="space-y-4 text-sm text-[#E7ECEF]/60 leading-relaxed">
                             <p>
-                                Os Serviços são fornecidos "no estado em que se encontram" e "conforme disponibilidade".
+                                Os Serviços são fornecidos &quot;no estado em que se encontram&quot; e &quot;conforme disponibilidade&quot;.
                             </p>
                             <p>Na máxima extensão permitida por lei, a IDSR não será responsável por:</p>
                             <ul className="list-disc list-inside space-y-2 ml-4">

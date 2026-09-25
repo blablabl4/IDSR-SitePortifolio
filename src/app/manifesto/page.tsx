@@ -4,7 +4,7 @@ import React from 'react';
 import { GlassHeader } from '@/components/ui/GlassHeader';
 import { GlassSection } from '@/components/ui/GlassSection';
 import { Footer } from '@/components/ui/Footer';
-import { Scroll, Terminal, ShieldAlert, Cpu, CheckCircle2, ArrowRight, MessageSquare } from 'lucide-react';
+import { Terminal, ArrowRight, MessageSquare } from 'lucide-react';
 import { CONTACT_CONFIG, getWhatsAppUrl } from '@/lib/contact-config';
 
 export default function ManifestoPage() {
@@ -72,8 +72,8 @@ export default function ManifestoPage() {
                     </div>
 
                     <p>
-                        Nos últimos anos, o mercado foi inundado por promessas fáceis: "crie seu agente em 5 minutos",
-                        "conecte 10 ferramentas sem saber programar", "deixe sua empresa no piloto automático sem esforço".
+                        Nos últimos anos, o mercado foi inundado por promessas fáceis: &quot;crie seu agente em 5 minutos&quot;,
+                        &quot;conecte 10 ferramentas sem saber programar&quot;, &quot;deixe sua empresa no piloto automático sem esforço&quot;.
                     </p>
 
                     <p>
