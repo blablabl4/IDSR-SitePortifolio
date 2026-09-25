@@ -3,6 +3,7 @@ import { ContactFormSchema } from '@/lib/schemas';
 import { redis } from '@/lib/kv';
 import { v4 as uuidv4 } from 'uuid';
 import { CONTACT_CONFIG } from '@/lib/contact-config';
+import { notifyLead } from '@/lib/notify';
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,6 +48,27 @@ export async function POST(req: NextRequest) {
 
     // Log estruturado para auditoria e rastreabilidade (princípio IDSR)
     console.info('[IDSR Lead Captured]', JSON.stringify(leadRecord));
+
+    try {
+      const result = await notifyLead({
+        nome: data.nome,
+        email: data.email,
+        telefone: data.telefone,
+        segmento: data.segmento,
+        gargalo: data.mensagem,
+        protocolo: ticketId,
+      });
+
+      if (result.reason === 'not_configured') {
+        console.warn('[Contact API] Notificação de lead não configurada, seguindo normalmente.');
+      }
+    } catch (notifyError) {
+      console.error('[Contact API] Falha ao notificar lead:', notifyError);
+      return NextResponse.json(
+        { error: 'Não conseguimos registrar seu contato. Chame no WhatsApp para agilizar.' },
+        { status: 500 }
+      );
+    }
 
     // Mensagem de WhatsApp estruturada para atendimento imediato via CONTACT_CONFIG
     const waNumber = CONTACT_CONFIG.whatsappNumber.replace(/\D/g, '');

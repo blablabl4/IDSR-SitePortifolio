@@ -1,6 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { POST } from '@/app/api/contact/route';
+import { describe, it, expect, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+
+vi.mock('@/lib/notify', () => ({
+  notifyLead: vi.fn().mockResolvedValue({ sent: false, reason: 'not_configured' }),
+}));
+
+const { POST } = await import('@/app/api/contact/route');
+const { notifyLead } = await import('@/lib/notify');
 
 describe('/api/contact Route (TDD)', () => {
   it('should process valid contact submission and return ticketId', async () => {
@@ -50,5 +56,29 @@ describe('/api/contact Route (TDD)', () => {
     expect(body.error).toBe('Dados do formulário inválidos');
     expect(body.details).toHaveProperty('email');
     expect(body.details).toHaveProperty('nome');
+  });
+
+  it('should return 500 with a clear message when notifyLead throws', async () => {
+    vi.mocked(notifyLead).mockRejectedValueOnce(new Error('todos os canais falharam'));
+
+    const payload = {
+      nome: 'Mariana Costa',
+      email: 'mariana@restaurante.com',
+      telefone: '(11) 98888-7777',
+      segmento: 'restaurante',
+      mensagem: 'Gostaria de agendar uma demonstração do Pulse para automatizar reservas.',
+    };
+
+    const req = new NextRequest('http://localhost:3000/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+
+    const body = await res.json();
+    expect(body.error).toContain('WhatsApp');
   });
 });

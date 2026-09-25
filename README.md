@@ -151,6 +151,8 @@ cp .env.example .env.local
 | `OPENAI_API_KEY` | Chave de acesso a OpenAI API | Opcional (se usar GPT) |
 | `NEXT_PUBLIC_SITE_URL` | URL base do dominio em producao (ex: `https://idsr.com.br`) | Sim (para SEO) |
 
+Veja a lista completa e atualizada de variáveis em [`.env.example`](.env.example) — cada uma comentada com sua finalidade.
+
 ### Execucao em Desenvolvimento
 ```bash
 # 1. Instalar dependencias
