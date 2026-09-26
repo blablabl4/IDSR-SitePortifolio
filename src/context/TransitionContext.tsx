@@ -2,10 +2,17 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import gsap from 'gsap';
+import { pickActiveSection } from './activeSection';
+import { OFFER_MODULES } from '@/lib/offer';
+
+// Slugs usados nos ids/anchors das 5 seções de topo — offer.ts é a fonte de verdade
+// pros slugs de serviço (mesmos de /produtos), então os dois lados linkam pro mesmo lugar.
+export const SECTION_SLUGS = ['hero', 'servicos', 'quem-pode-usar', 'metodologia', 'contato'];
+export const SERVICE_SLUGS = OFFER_MODULES.map((m) => m.slug);
 
 export interface TransitionState {
-  progress: number; // 0.0 a 1.0 (scrubbable frame a frame)
-  currentSection: number; // 0: Intro/Hero, 1: Serviços, 2: Metodologia/Akita, 3: Contato
+  progress: number; // 0.0 a 1.0 durante a explosão/glitch de transição (não mais scrub contínuo de scroll)
+  currentSection: number; // 0: Intro/Hero, 1: Serviços, 2: Quem Pode Usar, 3: Metodologia, 4: Contato
   targetSection: number;
   serviceStep: number; // 0..4 (1 serviço por vez na Seção 1)
   targetServiceStep: number; // 0..4
@@ -26,10 +33,21 @@ interface TransitionContextType extends TransitionState {
   triggerIntroExplode: () => void;
   startGenesis: () => void;
   setProgressManual: (p: number) => void;
+  /** Ref-callback pra cada uma das 5 seções de topo (scroll nativo + IntersectionObserver). */
+  registerSection: (index: number) => (el: HTMLElement | null) => void;
+  /** Ref-callback pra cada um dos 5 blocos de serviço dentro da seção de Serviços. */
+  registerServiceStep: (index: number) => (el: HTMLElement | null) => void;
 }
 
 const TOTAL_SECTIONS = 5; // 0: Hero, 1: Serviços, 2: Quem Pode Usar, 3: Metodologia, 4: Contato
 const TOTAL_SERVICES = 5; // 5 serviços apresentados 1 por vez
+const SERVICES_SECTION_INDEX = 1;
+const SECTION_THRESHOLD = 0.5;
+const SERVICE_THRESHOLD = 0.6;
+// Suprime o IntersectionObserver por essa janela depois de um navigateTo() programático,
+// tempo suficiente pro scrollIntoView({behavior:'smooth'}) assentar sem o observer
+// disparando transições espúrias pras seções que ficam no caminho.
+const PROGRAMMATIC_SCROLL_SUPPRESS_MS = 900;
 
 const TransitionContext = createContext<TransitionContextType | null>(null);
 
@@ -44,145 +62,115 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     direction: 'forward',
     status: 'IDLE_NA_SECAO',
     locked: false,
-    // Nasce true: o gate de 5s de "montagem" foi removido (item 1 da fase 1 de
-    // performance). O conteúdo e o mural 3D já aparecem prontos desde o primeiro
-    // paint; o overlay de abertura (IntroGenesisSplash) agora é só cosmético e
-    // vive fora dessa máquina de estados, em SitePrincipalStage.
+    // Nasce true: o gate de "montagem" foi removido (item 1 da fase 1 de performance).
+    // O conteúdo e o mural 3D já aparecem prontos desde o primeiro paint; o overlay de
+    // abertura (IntroGenesisSplash) é só cosmético e vive fora dessa máquina de estados.
     introExploded: true,
     isIntroGenesis: false,
     hudRevealed: false,
   });
 
-  // "Latest ref" pattern: callbacks abaixo (handlers de scroll/navegação) leem sempre
-  // o state mais atual sem precisar recriar closures a cada mudança. Escrever o ref
-  // direto no corpo do componente violava a regra de pureza do render
-  // (react-hooks/refs); agora a escrita acontece num efeito, após o render.
+  // "Latest ref" pattern: callbacks abaixo leem sempre o state mais atual sem recriar
+  // closures a cada mudança. Escrever o ref direto no corpo do componente violava a
+  // regra de pureza do render (react-hooks/refs); a escrita acontece num efeito, após
+  // o render.
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   });
 
-  const snapTweenRef = useRef<gsap.core.Tween | null>(null);
-  const targetProgressRef = useRef<number>(0);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // Date.now() só pode rodar depois do primeiro paint, não durante o render
-  // (react-hooks/purity); o efeito abaixo (mount-only) marca o instante de
-  // chegada, preservando o mesmo cooldown de 650ms contra scroll logo após montar.
-  const arrivedAtTimeRef = useRef<number>(0);
-  const ghostScrollDeltaRef = useRef<number>(0);
-  const ghostResetTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const activeTweenRef = useRef<gsap.core.Tween | null>(null);
+  const suppressObserverRef = useRef(false);
+  const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    arrivedAtTimeRef.current = Date.now();
-  }, []);
+  // Elementos observados: seções de topo (o bloco de Serviços registra os 5 blocos de
+  // serviço, todos como seção 1) e os blocos de serviço (sub-navegação dentro dela).
+  const sectionElsRef = useRef(new Map<Element, number>());
+  const serviceElsRef = useRef(new Map<Element, number>());
+  const sectionObserverRef = useRef<IntersectionObserver | null>(null);
+  const serviceObserverRef = useRef<IntersectionObserver | null>(null);
 
-  // Transiciona para a próxima etapa (avanço de serviço ou de seção)
-  const completeForwardTransition = useCallback(() => {
+  // Dispara a explosão 3D / glitch de transição e só troca currentSection/serviceStep
+  // quando o tween termina — o mural continua fazendo a mistura de cores entre o tema
+  // atual (currentSection) e o de destino (targetSection) durante o voo, como antes.
+  const transitionTo = useCallback((nextSection: number, nextStep: number) => {
     const s = stateRef.current;
-    targetProgressRef.current = 0;
-    arrivedAtTimeRef.current = Date.now();
-    ghostScrollDeltaRef.current = 0;
+    if (s.currentSection === nextSection && s.serviceStep === nextStep) return;
+    // O observer pode disparar de novo enquanto o scroll-snap ainda está assentando
+    // (múltiplas leves oscilações de ratio antes de estabilizar). Se já existe um tween
+    // em andamento rumo a esse MESMO alvo, ignora — senão cada disparo reinicia a
+    // animação do zero e ela nunca chega no onComplete que troca currentSection.
+    const alreadyHeadingThere =
+      s.status !== 'IDLE_NA_SECAO' && s.targetSection === nextSection && s.targetServiceStep === nextStep;
+    if (alreadyHeadingThere) return;
 
-    // Se estamos na seção 1 (Serviços) e ainda há serviços para exibir (1 por vez)
-    if (s.currentSection === 1 && s.serviceStep < TOTAL_SERVICES - 1) {
-      const nextStep = s.serviceStep + 1;
-      setState((prev) => ({
-        ...prev,
-        serviceStep: nextStep,
-        targetServiceStep: nextStep,
-        direction: 'forward',
-        progress: 0,
-        status: 'IDLE_NA_SECAO',
-        locked: false,
-      }));
-      return;
-    }
-
-    // Se é avanço de seção
-    if (s.currentSection < TOTAL_SECTIONS - 1) {
-      const nextSec = s.currentSection + 1;
-      const willRevealHud = nextSec >= TOTAL_SECTIONS - 1;
-      setState((prev) => ({
-        ...prev,
-        currentSection: nextSec,
-        targetSection: nextSec,
-        serviceStep: 0,
-        targetServiceStep: 0,
-        direction: 'forward',
-        progress: 0,
-        status: 'IDLE_NA_SECAO',
-        locked: false,
-        hudRevealed: prev.hudRevealed || willRevealHud,
-      }));
-    } else {
-      // Já está na última seção (Contato)
-      setState((prev) => ({
-        ...prev,
-        progress: 0,
-        status: 'IDLE_NA_SECAO',
-        locked: false,
-      }));
-    }
-  }, []);
-
-  // Navegação direta com animação breve e fluida (avançar ou retroceder sem ignorar o efeito)
-  const navigateTo = useCallback((targetSec: number, targetStep: number = 0) => {
-    const s = stateRef.current;
-    if (s.locked) return;
-    if (s.currentSection === targetSec && s.serviceStep === targetStep) return;
-
-    if (snapTweenRef.current) snapTweenRef.current.kill();
+    if (activeTweenRef.current) activeTweenRef.current.kill();
 
     const currentScore = s.currentSection * 10 + s.serviceStep;
-    const targetScore = targetSec * 10 + targetStep;
+    const targetScore = nextSection * 10 + nextStep;
     const dir: 'forward' | 'backward' = targetScore >= currentScore ? 'forward' : 'backward';
-
-    // Determina se é transição interna de serviços ou transição de seções
-    const isServiceInternal = s.currentSection === 1 && targetSec === 1;
+    const isSectionChange = nextSection !== s.currentSection;
 
     setState((prev) => ({
       ...prev,
-      targetSection: targetSec,
-      targetServiceStep: targetStep,
+      targetSection: nextSection,
+      targetServiceStep: nextStep,
       direction: dir,
-      status: 'TRANSICIONANDO',
-      locked: true,
-      hudRevealed: prev.hudRevealed || targetSec >= TOTAL_SECTIONS - 1,
+      status: dir === 'forward' ? 'TRANSICIONANDO' : 'REBOBINANDO',
+      hudRevealed: prev.hudRevealed || nextSection >= TOTAL_SECTIONS - 1,
     }));
 
     const tweenObj = { p: 0 };
-    // Duração ágil e breve: ~0.42s para serviços (glitch conciso), ~0.65s para seções (explosão 3D)
-    const duration = isServiceInternal ? 0.42 : 0.65;
-    const maxP = isServiceInternal ? 0.55 : 1.0;
+    // Duração breve: ~0.42s para troca de serviço (glitch conciso), ~0.65s pra explosão de seção
+    const duration = isSectionChange ? 0.65 : 0.42;
 
-    snapTweenRef.current = gsap.to(tweenObj, {
-      p: maxP,
+    activeTweenRef.current = gsap.to(tweenObj, {
+      p: 1,
       duration,
-      ease: isServiceInternal ? 'power1.inOut' : 'power2.inOut',
+      ease: 'power2.inOut',
       onUpdate: () => {
         setState((prev) => ({ ...prev, progress: tweenObj.p }));
       },
       onComplete: () => {
-        snapTweenRef.current = null;
-        targetProgressRef.current = 0;
-        arrivedAtTimeRef.current = Date.now();
-        ghostScrollDeltaRef.current = 0;
+        activeTweenRef.current = null;
         setState((prev) => ({
           ...prev,
-          currentSection: targetSec,
-          targetSection: targetSec,
-          serviceStep: targetStep,
-          targetServiceStep: targetStep,
+          currentSection: nextSection,
+          serviceStep: nextStep,
           progress: 0,
           status: 'IDLE_NA_SECAO',
-          locked: false,
-          introExploded: true,
         }));
       },
     });
   }, []);
 
-  // Rebobinamento / Navegação acionada pelo Menu
+  // Navegação por clique (HUD, setas) ou programática: rola de verdade até o elemento
+  // (scroll nativo, funciona com teclado/leitor de tela) e já dispara a transição
+  // visual na hora, sem esperar o observer — que fica suprimido enquanto o scroll
+  // suave em progresso passaria por seções intermediárias.
+  const navigateTo = useCallback((targetSec: number, targetStep: number = 0) => {
+    const id =
+      targetSec === SERVICES_SECTION_INDEX
+        ? `servico-${SERVICE_SLUGS[targetStep] ?? targetStep}`
+        : `secao-${SECTION_SLUGS[targetSec] ?? targetSec}`;
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    suppressObserverRef.current = true;
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+    suppressTimeoutRef.current = setTimeout(() => {
+      suppressObserverRef.current = false;
+    }, PROGRAMMATIC_SCROLL_SUPPRESS_MS);
+    // Um scheduleTransition do observer pode já estar pendente de um scroll natural
+    // que essa navegação por clique está sobrepondo — cancela pra não disparar
+    // depois com um alvo desatualizado.
+    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+
+    transitionTo(targetSec, targetStep);
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [transitionTo]);
+
   const rewindToSection = useCallback((targetSectionIndex: number) => {
     navigateTo(targetSectionIndex, 0);
   }, [navigateTo]);
@@ -195,202 +183,145 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     setState((prev) => ({ ...prev, introExploded: true }));
   }, []);
 
-  // Disparo cinemático de transição para trás (Scroll para Cima / Retroceder)
-  const triggerTransitionBackward = useCallback(() => {
-    const s = stateRef.current;
-    if (s.status !== 'IDLE_NA_SECAO' || s.locked) return;
-    if (s.currentSection === 0 && s.serviceStep === 0) return;
-
-    let prevSec = s.currentSection;
-    let prevStep = s.serviceStep;
-
-    if (s.currentSection === 1 && s.serviceStep > 0) {
-      prevSec = 1;
-      prevStep = s.serviceStep - 1;
-    } else if (s.currentSection === 1 && s.serviceStep === 0) {
-      prevSec = 0;
-      prevStep = 0;
-    } else if (s.currentSection === 2) {
-      prevSec = 1;
-      prevStep = TOTAL_SERVICES - 1;
-    } else if (s.currentSection > 2) {
-      prevSec = s.currentSection - 1;
-      prevStep = 0;
-    }
-
-    navigateTo(prevSec, prevStep);
-  }, [navigateTo]);
-
-  // Interceptador de Wheel / Touch: SCRUBBING CONTÍNUO FRAME A FRAME
-  // Permite rolar devagar e ver cada frame e bloco se mover em tempo real
-  useEffect(() => {
-    let touchStartY = 0;
-    // Copiado no início do efeito porque nada dentro dele reatribui esse ref (fica
-    // sempre null); ler scrollTimeoutRef.current de novo no cleanup é o padrão que
-    // o exhaustive-deps sinaliza como arriscado quando o valor pode ter mudado.
-    const scrollTimeout = scrollTimeoutRef.current;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const current = stateRef.current;
-      if (current.locked) return;
-
-      // Tela Pré-Hero: qualquer scroll para baixo dispara a gênese cinematográfica de 5s
-      if (!current.introExploded) {
-        if (e.deltaY > 15) {
-          startGenesis();
-        }
-        return;
-      }
-
-      if (current.status === 'REBOBINANDO') return;
-
-      const now = Date.now();
-      // 1. Cooldown de estabilização pós-chegada (650ms):
-      // Descarta inércia residual ou rolagens imediatas para dar tempo de visualizar o serviço/seção
-      if (now - arrivedAtTimeRef.current < 650) {
-        ghostScrollDeltaRef.current = 0;
-        return;
-      }
-
-      // Se usuário está parado e rola para cima firmemente -> recua seção/serviço com efeito reverso
-      if (current.status === 'IDLE_NA_SECAO' && targetProgressRef.current === 0 && e.deltaY < -30) {
-        ghostScrollDeltaRef.current = 0;
-        triggerTransitionBackward();
-        return;
-      }
-
-      // Se já está na última seção (Contato) e tenta rolar para baixo -> TRAVA TOTAL (sem scroll infinito)
-      const isAtLastSection = current.currentSection >= TOTAL_SECTIONS - 1;
-      if (isAtLastSection && e.deltaY > 0) {
-        targetProgressRef.current = 0;
-        ghostScrollDeltaRef.current = 0;
-        if (current.status !== 'IDLE_NA_SECAO' || current.progress !== 0) {
-          setState((prev) => ({
-            ...prev,
-            status: 'IDLE_NA_SECAO',
-            progress: 0,
-          }));
-        }
-        return;
-      }
-
-      // 2. Scroll "Fantasma" (Trava de ativação pré-glitch para serviços):
-      // Quando o usuário está parado em um serviço, ele não quer que um toque mínimo no scroll já pule
-      // para o próximo serviço. Exigimos uma rolagem fantasma intencional de 180px antes de iniciar o glitch!
-      const isInternalService = current.currentSection === 1 && current.serviceStep < TOTAL_SERVICES - 1;
-      const GHOST_SCROLL_THRESHOLD = 180; // px necessários para destravar o glitch
-
-      if (isInternalService && current.status === 'IDLE_NA_SECAO' && targetProgressRef.current === 0 && e.deltaY > 0) {
-        if (ghostScrollDeltaRef.current < GHOST_SCROLL_THRESHOLD) {
-          ghostScrollDeltaRef.current += e.deltaY;
-
-          // Se o usuário parar de rolar antes de vencer o limiar, limpa o buffer após 400ms
-          if (ghostResetTimerRef.current) clearTimeout(ghostResetTimerRef.current);
-          ghostResetTimerRef.current = setTimeout(() => {
-            ghostScrollDeltaRef.current = 0;
-          }, 400);
-
-          return; // Absorve o scroll fantasma como trava sem mover absolutamente nada na tela
-        }
-      }
-
-      // Diferenciação de sensibilidade e curso de scroll:
-      // Transição interna entre serviços (0->1, 1->2, 2->3):
-      // Sensibilidade calibrada para 0.0018 com limiar 0.60: curso confortável e deliberado sem ser hiper-sensível
-      const sensitivity = isInternalService ? 0.0018 : 0.0010;
-      const nextP = Math.max(0, Math.min(1, targetProgressRef.current + e.deltaY * sensitivity));
-      targetProgressRef.current = nextP;
-
-      if (nextP <= 0.01) {
-        targetProgressRef.current = 0;
-        ghostScrollDeltaRef.current = 0;
-        setState((prev) => ({
-          ...prev,
-          status: 'IDLE_NA_SECAO',
-          progress: 0,
-        }));
-        return;
-      }
-
-      // Limiar de conclusão claro, breve e cirurgicamente delimitado:
-      // Para serviços: a rajada de glitch é breve (pico em 0.28). Ao atingir >= 0.60, o novo serviço engata e trava!
-      // Para seções (explosão): conclui em >= 0.94
-      const threshold = isInternalService ? 0.60 : 0.94;
-      if (nextP >= threshold) {
-        targetProgressRef.current = 0;
-        ghostScrollDeltaRef.current = 0;
-        completeForwardTransition();
-        return;
-      }
-
-      // Define explicitamente o alvo da transição para frente (seção ou próximo serviço)
-      const targetSec = isInternalService
-        ? 1
-        : current.currentSection < TOTAL_SECTIONS - 1
-        ? current.currentSection + 1
-        : current.currentSection;
-      const targetStep = isInternalService ? current.serviceStep + 1 : 0;
-
-      // Em qualquer ponto intermediário (0.005 < nextP < threshold), o frame fica congelado
-      // exatamente na posição ditada pela mão do usuário
-      setState((prev) => ({
-        ...prev,
-        targetSection: targetSec,
-        targetServiceStep: targetStep,
-        direction: 'forward',
-        status: 'TRANSICIONANDO',
-        progress: nextP,
-      }));
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      const touchY = e.touches[0].clientY;
-      const delta = (touchStartY - touchY) * 1.8;
-      touchStartY = touchY;
-
-      handleWheel({
-        preventDefault: () => {},
-        deltaY: delta,
-      } as WheelEvent);
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      if (ghostResetTimerRef.current) clearTimeout(ghostResetTimerRef.current);
-    };
-  }, [completeForwardTransition, triggerTransitionBackward, startGenesis]);
-
   const triggerIntroExplode = useCallback(() => {
     startGenesis();
   }, [startGenesis]);
 
   const nextService = useCallback(() => {
-    if (stateRef.current.serviceStep < TOTAL_SERVICES - 1) {
-      setState((prev) => ({ ...prev, serviceStep: prev.serviceStep + 1 }));
-    }
-  }, []);
+    const s = stateRef.current;
+    if (s.serviceStep < TOTAL_SERVICES - 1) navigateTo(SERVICES_SECTION_INDEX, s.serviceStep + 1);
+  }, [navigateTo]);
 
   const prevService = useCallback(() => {
-    if (stateRef.current.serviceStep > 0) {
-      setState((prev) => ({ ...prev, serviceStep: prev.serviceStep - 1 }));
-    }
-  }, []);
+    const s = stateRef.current;
+    if (s.serviceStep > 0) navigateTo(SERVICES_SECTION_INDEX, s.serviceStep - 1);
+  }, [navigateTo]);
 
   const setProgressManual = useCallback((p: number) => {
     setState((prev) => ({ ...prev, progress: p }));
+  }, []);
+
+  // Debounce entre a decisão do observer e a transição de verdade: um scroll rápido
+  // (ou o scroll-snap nativo assentando) dispara vários lotes de entries em sequência
+  // rápida, cada um podendo "decidir" uma seção/passo diferente por uma fração de
+  // segundo. Agir na hora faria cada disparo interromper o tween anterior a meio
+  // caminho; só a última decisão estável (depois de OBSERVER_DEBOUNCE_MS quieto) vira
+  // de fato uma chamada a transitionTo.
+  const OBSERVER_DEBOUNCE_MS = 120;
+  const scheduleTransition = useCallback((section: number, step: number) => {
+    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+    debounceTimeoutRef.current = setTimeout(() => {
+      debounceTimeoutRef.current = null;
+      transitionTo(section, step);
+    }, OBSERVER_DEBOUNCE_MS);
+  }, [transitionTo]);
+
+  // IntersectionObserver de seções de topo: qual seção está mais visível vira
+  // currentSection. Os 5 blocos de serviço contam todos como seção 1.
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (suppressObserverRef.current) return;
+        const map = sectionElsRef.current;
+        // O observer só reporta as entries que mudaram nesta leva; agrega pelo maior
+        // ratio dentro de cada seção (a de Serviços tem 5 elementos mapeados pro mesmo índice).
+        const ratiosBySection = new Map<number, number>();
+        entries.forEach((entry) => {
+          const idx = map.get(entry.target);
+          if (idx === undefined) return;
+          const prevRatio = ratiosBySection.get(idx) ?? 0;
+          ratiosBySection.set(idx, Math.max(prevRatio, entry.intersectionRatio));
+        });
+        if (ratiosBySection.size === 0) return;
+        const picked = pickActiveSection(
+          Array.from(ratiosBySection, ([index, ratio]) => ({ index, ratio })),
+          SECTION_THRESHOLD
+        );
+        if (picked === null) return;
+        const s = stateRef.current;
+        if (picked === s.currentSection) return;
+        // Ao entrar na seção de Serviços via scroll natural, mantém o serviceStep atual
+        // (o observer de serviços abaixo cuida de refiná-lo); nas demais, step = 0.
+        scheduleTransition(picked, picked === SERVICES_SECTION_INDEX ? s.serviceStep : 0);
+      },
+      { threshold: [0, SECTION_THRESHOLD, 1] }
+    );
+    sectionObserverRef.current = observer;
+    sectionElsRef.current.forEach((_, el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [scheduleTransition]);
+
+  // IntersectionObserver dos blocos de serviço: qual bloco está mais visível vira
+  // serviceStep, só quando a seção ativa já é a de Serviços.
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (suppressObserverRef.current) return;
+        if (stateRef.current.currentSection !== SERVICES_SECTION_INDEX) return;
+        const map = serviceElsRef.current;
+        const ratiosByStep = new Map<number, number>();
+        entries.forEach((entry) => {
+          const idx = map.get(entry.target);
+          if (idx === undefined) return;
+          const prevRatio = ratiosByStep.get(idx) ?? 0;
+          ratiosByStep.set(idx, Math.max(prevRatio, entry.intersectionRatio));
+        });
+        if (ratiosByStep.size === 0) return;
+        const picked = pickActiveSection(
+          Array.from(ratiosByStep, ([index, ratio]) => ({ index, ratio })),
+          SERVICE_THRESHOLD
+        );
+        if (picked === null) return;
+        if (picked === stateRef.current.serviceStep) return;
+        scheduleTransition(SERVICES_SECTION_INDEX, picked);
+      },
+      { threshold: [0, SERVICE_THRESHOLD, 1] }
+    );
+    serviceObserverRef.current = observer;
+    serviceElsRef.current.forEach((_, el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [scheduleTransition]);
+
+  useEffect(() => {
+    return () => {
+      if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+      if (activeTweenRef.current) activeTweenRef.current.kill();
+    };
+  }, []);
+
+  // Cada chamada a registerSection(index) devolve um ref-callback com sua PRÓPRIA
+  // variável de closure (currentEl) — necessário porque os 5 blocos de serviço
+  // registram todos o mesmo índice de seção (1) simultaneamente; uma limpeza "achar o
+  // elemento anterior com esse índice e remover" apagaria os outros 4.
+  const registerSection = useCallback((index: number) => {
+    let currentEl: HTMLElement | null = null;
+    return (el: HTMLElement | null) => {
+      if (currentEl) {
+        sectionObserverRef.current?.unobserve(currentEl);
+        sectionElsRef.current.delete(currentEl);
+      }
+      currentEl = el;
+      if (el) {
+        sectionElsRef.current.set(el, index);
+        sectionObserverRef.current?.observe(el);
+      }
+    };
+  }, []);
+
+  const registerServiceStep = useCallback((index: number) => {
+    let currentEl: HTMLElement | null = null;
+    return (el: HTMLElement | null) => {
+      if (currentEl) {
+        serviceObserverRef.current?.unobserve(currentEl);
+        serviceElsRef.current.delete(currentEl);
+      }
+      currentEl = el;
+      if (el) {
+        serviceElsRef.current.set(el, index);
+        serviceObserverRef.current?.observe(el);
+      }
+    };
   }, []);
 
   return (
@@ -404,6 +335,8 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
         triggerIntroExplode,
         startGenesis,
         setProgressManual,
+        registerSection,
+        registerServiceStep,
       }}
     >
       {children}
