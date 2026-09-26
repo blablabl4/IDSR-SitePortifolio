@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { generalSans, cabinetGrotesk, jetbrainsMono } from "@/fonts";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -72,7 +73,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={`${generalSans.variable} ${cabinetGrotesk.variable} ${jetbrainsMono.variable}`}>
       <head>
         <script
           type="application/ld+json"

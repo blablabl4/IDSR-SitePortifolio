@@ -3,7 +3,7 @@
    Regras Não Negociáveis:
    1. Nunca usar Inter em nenhuma parte do projeto.
    2. Fontes: JetBrains Mono (técnico/código), General Sans (leitura/corpo),
-      PP Neue Machina / Cabinet Grotesk (títulos e wordmark IDSR).
+      Cabinet Grotesk (títulos e wordmark IDSR).
    3. Base escura neutra #0a0a0b (sem tingimento azulado).
    4. Aurora (#7c6cf6, #f472b6, #38e0e0, #fbbf24) visível apenas atrás do vidro
       ou dentro do mundo do portfólio.
@@ -31,10 +31,9 @@
   --glass-border-hover: rgba(255, 255, 255, 0.45);
   --glass-blur: 16px;
 
-  /* --- Tipografia Oficial (Três fontes com papéis estritos) --- */
-  --font-mono: 'JetBrains Mono', monospace;
-  --font-sans: 'General Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'PP Neue Machina', 'Cabinet Grotesk', system-ui, sans-serif;
+  /* --- Tipografia Oficial (Três fontes com papéis estritos) ---
+     --font-mono/--font-sans/--font-display vêm do next/font (src/fonts/index.ts),
+     aplicado como className no <html> em layout.tsx — não redeclarar aqui. */
 
   --color-text-primary: #ffffff;
   --color-text-secondary: rgba(255, 255, 255, 0.70);
