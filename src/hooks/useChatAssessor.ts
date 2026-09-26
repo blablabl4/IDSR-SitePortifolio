@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAssessor } from './useAssessor';
 import { Message, SelectionValue } from '@/components/chat/ChatInterface';
 import { Segment, PainPoint, Impact, DataMaturity } from '@/types';
@@ -8,6 +8,8 @@ export function useChatAssessor() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
+    const [lastProcessedMessageId, setLastProcessedMessageId] = useState<string | null>(null);
+    const [awaitingNextQuestion, setAwaitingNextQuestion] = useState(false);
 
     // Hook for "Diagnosticar Agora" button or explicit start
     const startDiagnosis = () => {
@@ -45,34 +47,17 @@ export function useChatAssessor() {
         // If already started, we would need NLP to parse. For MVP, we proceed flow.
     };
 
-    // Effect to handle step transitions (Logic -> ChatUI)
-    useEffect(() => {
-        if (!hasStarted) return;
-        if (messages.length === 0) return;
-
-        const lastMsg = messages[messages.length - 1];
-        if (lastMsg.role === 'user') {
-            // Wait before bot replies
-            setIsTyping(true);
-            const timeout = setTimeout(() => {
-                askNextQuestion();
-                setIsTyping(false);
-            }, 800 + Math.random() * 500);
-            return () => clearTimeout(timeout);
-        }
-    }, [messages, assessor.state.step, hasStarted]);
-
-    const addBotMessage = (text: string, type: 'text' | 'options' = 'text', options: { label: string; value: SelectionValue }[] = []) => {
+    const addBotMessage = useCallback((text: string, type: 'text' | 'options' = 'text', options: { label: string; value: SelectionValue }[] = []) => {
         const id = Math.random().toString(36).substr(2, 9);
         setMessages(prev => [...prev, { id, role: 'bot', text, type, options }]);
-    };
+    }, []);
 
-    const addUserMessage = (text: string) => {
+    const addUserMessage = useCallback((text: string) => {
         const id = Math.random().toString(36).substr(2, 9);
         setMessages(prev => [...prev, { id, role: 'user', text }]);
-    };
+    }, []);
 
-    const askNextQuestion = () => {
+    const askNextQuestion = useCallback(() => {
         const s = assessor.state;
         // Map step to question
         // IMPORTANT: If user just sent text (initial), we might be in 'start'. 
@@ -138,7 +123,35 @@ export function useChatAssessor() {
                 }, 800);
                 break;
         }
-    };
+    }, [assessor.state, addBotMessage]);
+
+    // Detecta uma nova mensagem do usuário durante o render (padrão oficial do React
+    // para "ajustar estado em resposta a uma mudança", comparando com o último id
+    // processado) e liga o "digitando" na hora — em vez de um setState síncrono no
+    // corpo do efeito abaixo (react-hooks/set-state-in-effect).
+    const lastMsg = messages[messages.length - 1];
+    if (hasStarted && lastMsg?.role === 'user' && lastMsg.id !== lastProcessedMessageId) {
+        setLastProcessedMessageId(lastMsg.id);
+        setIsTyping(true);
+        setAwaitingNextQuestion(true);
+    }
+
+    // Efeito de transição de etapa (Lógica -> ChatUI): só o timer (algo externo)
+    // fica no efeito, disparado exclusivamente pela detecção de mensagem acima —
+    // não reusa isTyping como dep porque initFlow também liga/desliga isTyping
+    // para as falas iniciais do bot, sem relação com askNextQuestion. Precisa vir
+    // depois de askNextQuestion estar declarada: chamá-la antes da declaração
+    // (mesmo dentro de um setTimeout, que só executa depois) violava
+    // react-hooks/immutability.
+    useEffect(() => {
+        if (!awaitingNextQuestion) return;
+        const timeout = setTimeout(() => {
+            askNextQuestion();
+            setIsTyping(false);
+            setAwaitingNextQuestion(false);
+        }, 800 + Math.random() * 500);
+        return () => clearTimeout(timeout);
+    }, [awaitingNextQuestion, askNextQuestion]);
 
     const handleSelection = (value: SelectionValue) => {
         // 1. Add User Message
