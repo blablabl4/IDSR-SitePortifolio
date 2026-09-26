@@ -49,15 +49,28 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     hudRevealed: false,
   });
 
+  // "Latest ref" pattern: callbacks abaixo (handlers de scroll/navegação) leem sempre
+  // o state mais atual sem precisar recriar closures a cada mudança. Escrever o ref
+  // direto no corpo do componente violava a regra de pureza do render
+  // (react-hooks/refs); agora a escrita acontece num efeito, após o render.
   const stateRef = useRef(state);
-  stateRef.current = state;
+  useEffect(() => {
+    stateRef.current = state;
+  });
 
   const snapTweenRef = useRef<gsap.core.Tween | null>(null);
   const targetProgressRef = useRef<number>(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const arrivedAtTimeRef = useRef<number>(Date.now());
+  // Date.now() só pode rodar depois do primeiro paint, não durante o render
+  // (react-hooks/purity); o efeito abaixo (mount-only) marca o instante de
+  // chegada, preservando o mesmo cooldown de 650ms contra scroll logo após montar.
+  const arrivedAtTimeRef = useRef<number>(0);
   const ghostScrollDeltaRef = useRef<number>(0);
   const ghostResetTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    arrivedAtTimeRef.current = Date.now();
+  }, []);
 
   // Transiciona para a próxima etapa (avanço de serviço ou de seção)
   const completeForwardTransition = useCallback(() => {
