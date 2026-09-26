@@ -44,7 +44,11 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     direction: 'forward',
     status: 'IDLE_NA_SECAO',
     locked: false,
-    introExploded: false, // Inicialmente na tela pré-hero de Gênese
+    // Nasce true: o gate de 5s de "montagem" foi removido (item 1 da fase 1 de
+    // performance). O conteúdo e o mural 3D já aparecem prontos desde o primeiro
+    // paint; o overlay de abertura (IntroGenesisSplash) agora é só cosmético e
+    // vive fora dessa máquina de estados, em SitePrincipalStage.
+    introExploded: true,
     isIntroGenesis: false,
     hudRevealed: false,
   });
@@ -183,43 +187,12 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     navigateTo(targetSectionIndex, 0);
   }, [navigateTo]);
 
-  // Gênese de Abertura: 5 segundos de montagem acelerando progressivamente
+  // Vestigial: introExploded já nasce true (sem gate de montagem), então isso é
+  // sempre um no-op hoje. Mantido só porque IntroGenesisSplash/triggerIntroExplode
+  // ainda chamam essa função — sem quebrar a forma pública de useTransition().
   const startGenesis = useCallback(() => {
     if (stateRef.current.introExploded || stateRef.current.isIntroGenesis) return;
-
-    if (snapTweenRef.current) snapTweenRef.current.kill();
-
-    setState((prev) => ({
-      ...prev,
-      isIntroGenesis: true,
-      status: 'TRANSICIONANDO',
-      progress: 0,
-      locked: true,
-    }));
-
-    const tweenObj = { p: 0 };
-    snapTweenRef.current = gsap.to(tweenObj, {
-      p: 1,
-      duration: 5.0, // 5 segundos de animação cinematográfica
-      ease: 'power2.in', // Começa devagar bloco a bloco e vai acelerando até montar tudo
-      onUpdate: () => {
-        setState((prev) => ({ ...prev, progress: tweenObj.p }));
-      },
-      onComplete: () => {
-        snapTweenRef.current = null;
-        targetProgressRef.current = 0;
-        arrivedAtTimeRef.current = Date.now();
-        ghostScrollDeltaRef.current = 0;
-        setState((prev) => ({
-          ...prev,
-          introExploded: true,
-          isIntroGenesis: false,
-          progress: 0,
-          status: 'IDLE_NA_SECAO',
-          locked: false,
-        }));
-      },
-    });
+    setState((prev) => ({ ...prev, introExploded: true }));
   }, []);
 
   // Disparo cinemático de transição para trás (Scroll para Cima / Retroceder)

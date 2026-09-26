@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { RepelledWord } from '@/components/ui/RepelledWord';
 
 interface IntroGenesisSplashProps {
@@ -8,14 +8,42 @@ interface IntroGenesisSplashProps {
   isStarting: boolean;
 }
 
+// Dispara o dismiss a tempo da transição de opacidade (duration-500 abaixo) terminar
+// dentro do orçamento total de 1,2s pedido, mesmo sem nenhuma interação do visitante.
+const AUTO_DISMISS_MS = 700;
+
 /**
- * IntroGenesisSplash — Tela Pré-Hero de Abertura / Gênese
+ * IntroGenesisSplash — Overlay de Abertura / Gênese
+ * Some sozinho em no máximo 1,2s, ou assim que o visitante interage (scroll, clique,
+ * tecla) — o que vier primeiro. Nunca bloqueia o conteúdo do hero, que já está
+ * visível por baixo enquanto este overlay ainda aparece.
  * - Título 'GENESIS' na lateral superior esquerda
  * - Frase conceitual com palavras que se movem de forma independente ao passar o cursor
  * - Destaque em gradiente contínuo único ao longo de 'RECRIE E REIMAGINE'
- * - Animação de mouse/scroll para iniciar
  */
 export function IntroGenesisSplash({ onEnter, isStarting }: IntroGenesisSplashProps) {
+  const enteredRef = useRef(false);
+
+  useEffect(() => {
+    const enterOnce = () => {
+      if (enteredRef.current) return;
+      enteredRef.current = true;
+      onEnter();
+    };
+
+    const timer = setTimeout(enterOnce, AUTO_DISMISS_MS);
+    window.addEventListener('wheel', enterOnce, { once: true, passive: true });
+    window.addEventListener('touchstart', enterOnce, { once: true, passive: true });
+    window.addEventListener('keydown', enterOnce, { once: true });
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('wheel', enterOnce);
+      window.removeEventListener('touchstart', enterOnce);
+      window.removeEventListener('keydown', enterOnce);
+    };
+  }, [onEnter]);
+
   // Renderiza uma sequência de palavras repelidas pelo cursor do mouse
   const renderInteractivePhrase = (
     phrase: string,
@@ -35,7 +63,7 @@ export function IntroGenesisSplash({ onEnter, isStarting }: IntroGenesisSplashPr
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center text-center px-6 sm:px-12 bg-[#0a0a0b] transition-opacity duration-1000 select-none ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center text-center px-6 sm:px-12 bg-[#0a0a0b] transition-opacity duration-500 select-none ${
         isStarting ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
@@ -98,10 +126,7 @@ export function IntroGenesisSplash({ onEnter, isStarting }: IntroGenesisSplashPr
               className="text-[10px] sm:text-[11px] font-bold tracking-[0.32em] text-white/50 group-hover:text-white uppercase transition-colors duration-200"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
-              CLIQUE OU ROLE PARA INICIAR
-            </span>
-            <span className="text-[9px] tracking-[0.2em] text-[#38e0e0]/70 uppercase">
-              [ 5.0S DE MONTAGEM ]
+              CLIQUE OU ROLE PARA CONTINUAR
             </span>
           </div>
         </div>
