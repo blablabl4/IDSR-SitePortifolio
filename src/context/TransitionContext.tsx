@@ -48,8 +48,23 @@ const SERVICE_THRESHOLD = 0.6;
 // tempo suficiente pro scrollIntoView({behavior:'smooth'}) assentar sem o observer
 // disparando transições espúrias pras seções que ficam no caminho.
 const PROGRAMMATIC_SCROLL_SUPPRESS_MS = 900;
+// Se o status ficar fora de IDLE_NA_SECAO por mais tempo que isso, o watchdog assume
+// que o tween do gsap travou (ex.: usuário trocou de aba e o rAF pausou, então
+// onComplete nunca chama) e força a volta pro estado estável.
+const WATCHDOG_TIMEOUT_MS = 3000;
+const WATCHDOG_POLL_MS = 500;
 
 const TransitionContext = createContext<TransitionContextType | null>(null);
+
+/** Razão de visibilidade de um elemento na viewport — mesma noção de ratio do
+ * IntersectionObserver, mas calculada sob demanda (sem esperar o próximo callback),
+ * pro watchdog ressincronizar com a posição real de scroll no momento do timeout. */
+function computeVisibilityRatio(el: Element): number {
+  const rect = el.getBoundingClientRect();
+  if (rect.height <= 0) return 0;
+  const visible = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+  return visible / rect.height;
+}
 
 export function TransitionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<TransitionState>({
@@ -288,6 +303,70 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
       if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
       if (activeTweenRef.current) activeTweenRef.current.kill();
     };
+  }, []);
+
+  // Watchdog: guarda desde quando o status está fora de IDLE_NA_SECAO.
+  const transitionStuckSinceRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (state.status === 'IDLE_NA_SECAO') {
+      transitionStuckSinceRef.current = null;
+      return;
+    }
+    if (transitionStuckSinceRef.current === null) {
+      transitionStuckSinceRef.current = Date.now();
+    }
+  }, [state.status]);
+
+  // Cobre o usuário que troca de aba (ou minimiza) no meio de uma transição: o rAF
+  // do gsap pausa em segundo plano e o tween nunca chama onComplete, então o status
+  // ficaria travado em TRANSICIONANDO/REBOBINANDO pra sempre. Se isso durar mais que
+  // WATCHDOG_TIMEOUT_MS, mata o tween e ressincroniza a seção ativa com a posição
+  // real de scroll (não com o alvo antigo, que pode estar desatualizado se o usuário
+  // rolou manualmente enquanto o tween estava travado).
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const stuckSince = transitionStuckSinceRef.current;
+      if (stuckSince === null || Date.now() - stuckSince < WATCHDOG_TIMEOUT_MS) return;
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          `[TransitionContext] watchdog: status travado por mais de ${WATCHDOG_TIMEOUT_MS}ms, forçando IDLE_NA_SECAO`,
+          stateRef.current
+        );
+      }
+
+      if (activeTweenRef.current) {
+        activeTweenRef.current.kill();
+        activeTweenRef.current = null;
+      }
+      transitionStuckSinceRef.current = null;
+
+      const s = stateRef.current;
+      const sectionRatios = Array.from(sectionElsRef.current, ([el, idx]) => ({
+        index: idx,
+        ratio: computeVisibilityRatio(el),
+      }));
+      const resolvedSection = pickActiveSection(sectionRatios, SECTION_THRESHOLD) ?? s.targetSection;
+      let resolvedStep = 0;
+      if (resolvedSection === SERVICES_SECTION_INDEX) {
+        const stepRatios = Array.from(serviceElsRef.current, ([el, idx]) => ({
+          index: idx,
+          ratio: computeVisibilityRatio(el),
+        }));
+        resolvedStep = pickActiveSection(stepRatios, SERVICE_THRESHOLD) ?? s.targetServiceStep;
+      }
+
+      setState((prev) => ({
+        ...prev,
+        currentSection: resolvedSection,
+        serviceStep: resolvedStep,
+        targetSection: resolvedSection,
+        targetServiceStep: resolvedStep,
+        progress: 0,
+        status: 'IDLE_NA_SECAO',
+      }));
+    }, WATCHDOG_POLL_MS);
+    return () => clearInterval(interval);
   }, []);
 
   // Cada chamada a registerSection(index) devolve um ref-callback com sua PRÓPRIA
