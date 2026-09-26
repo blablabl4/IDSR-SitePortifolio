@@ -21,8 +21,6 @@ import { getWhatsAppUrl } from '@/lib/contact-config';
 import { QuemPodeUsarSection } from '@/components/ui/QuemPodeUsarSection';
 
 export default function ProdutosPage() {
-    const [expandedProduct, setExpandedProduct] = useState<string | null>('automacoes');
-
     const products = [
         {
             id: 'automacoes',
@@ -161,13 +159,24 @@ export default function ProdutosPage() {
         }
     ];
 
-    useEffect(() => {
+    // Lê o hash da URL já no estado inicial (em vez de montar sempre com 'automacoes'
+    // e corrigir depois num efeito) — evita o setState síncrono dentro do useEffect
+    // e o "flash" do produto errado expandido antes da correção.
+    const [expandedProduct, setExpandedProduct] = useState<string | null>(() => {
+        if (typeof window === 'undefined') return 'automacoes';
         const hash = window.location.hash.replace('#', '');
-        if (hash && products.find(p => p.id === hash)) {
-            setExpandedProduct(hash);
-            setTimeout(() => {
+        return products.some(p => p.id === hash) ? hash : 'automacoes';
+    });
+
+    useEffect(() => {
+        // products é recriado a cada render (não memoizado); incluir como dep faria
+        // este efeito rodar em todo render e reagendar o scroll repetidamente.
+        const hash = window.location.hash.replace('#', '');
+        if (hash && products.some(p => p.id === hash)) {
+            const timer = setTimeout(() => {
                 document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
+            return () => clearTimeout(timer);
         }
     }, []);
 
