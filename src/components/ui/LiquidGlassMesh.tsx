@@ -73,11 +73,11 @@ export function LiquidGlassMesh({
     scene.add(quad);
 
     let animationFrameId: number;
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
     let targetHover = 0;
     let currentHover = 0;
-    let targetMouse = new THREE.Vector2(0.5, 0.5);
-    let currentMouse = new THREE.Vector2(0.5, 0.5);
+    const targetMouse = new THREE.Vector2(0.5, 0.5);
+    const currentMouse = new THREE.Vector2(0.5, 0.5);
 
     const render = () => {
       const delta = clock.getDelta();

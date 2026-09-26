@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { GlassHeader } from '@/components/ui/GlassHeader';
 import { GlassSection } from '@/components/ui/GlassSection';
 import { Footer } from '@/components/ui/Footer';
@@ -313,12 +314,12 @@ export default function PrivacidadePage() {
                     <p className="text-sm text-[#E7ECEF]/50 mb-8">
                         Estamos à disposição para esclarecer qualquer questão sobre privacidade.
                     </p>
-                    <a
+                    <Link
                         href="/"
                         className="inline-flex items-center gap-2 px-6 py-3 bg-[#0D7C66] text-[#E7ECEF] rounded-xl text-sm font-medium hover:bg-[#0F5A47] transition-all shadow-lg shadow-[#0D7C66]/20"
                     >
                         Voltar para home
-                    </a>
+                    </Link>
                 </div>
             </section>
 
