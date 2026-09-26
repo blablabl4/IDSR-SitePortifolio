@@ -1,16 +1,40 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useTransition } from '@/context/TransitionContext';
-import { ParticleSceneCanvas } from '@/scenes/ParticleSceneCanvas';
 import { IntroGeneseHero } from './IntroGeneseHero';
 import { ServicosGlitchSequence } from './ServicosGlitchSequence';
 import { QuemPodeUsarSectionStage } from './QuemPodeUsarSectionStage';
 import { MetodologiaAkitaStory } from './MetodologiaAkitaStory';
 import { ContatoRewindHud } from './ContatoRewindHud';
-import { CustomMagneticCursor } from '@/components/ui/CustomMagneticCursor';
 import { NavigationHud } from './NavigationHud';
 import { IntroGenesisSplash } from './IntroGenesisSplash';
+
+// three (WebGL) e gsap não entram no bundle inicial da rota: só carregam no
+// cliente, depois do primeiro paint, com um fundo estático no lugar até lá.
+const ParticleSceneCanvas = dynamic(
+  () => import('@/scenes/ParticleSceneCanvas').then((m) => m.ParticleSceneCanvas),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="fixed inset-0 z-0"
+        style={{
+          height: '100dvh',
+          background:
+            'radial-gradient(ellipse at center, #1a1610 0%, #0a0a0b 55%, #050506 100%)',
+        }}
+        aria-hidden="true"
+      />
+    ),
+  }
+);
+
+const CustomMagneticCursor = dynamic(
+  () => import('@/components/ui/CustomMagneticCursor').then((m) => m.CustomMagneticCursor),
+  { ssr: false }
+);
 
 export function SitePrincipalStage() {
   const { currentSection, status } = useTransition();
