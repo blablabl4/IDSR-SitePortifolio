@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useTransition } from '@/context/TransitionContext';
+import Link from 'next/link';
+import { useTransition, SECTION_SLUGS } from '@/context/TransitionContext';
 
 const SECTION_NAMES: Record<number, string> = {
   0: 'HERO',
@@ -10,6 +11,13 @@ const SECTION_NAMES: Record<number, string> = {
   3: 'MÉTODO',
   4: 'CONTATO',
 };
+
+const SITE_LINKS = [
+  { href: '/produtos', label: 'Produtos' },
+  { href: '/precos', label: 'Preços' },
+  { href: '/sobre', label: 'Sobre' },
+  { href: '/contato', label: 'Contato' },
+];
 
 const SECTION_ACCENTS: Record<number, string> = {
   0: '#38e0e0', // Hero
@@ -22,11 +30,8 @@ const SECTION_ACCENTS: Record<number, string> = {
 const SERVICE_ACCENTS = ['#38e0e0', '#8b5cf6', '#10b981', '#ec4899', '#f59e0b'];
 
 export function NavigationHud() {
-  const { currentSection, serviceStep, navigateTo, status, hudRevealed } = useTransition();
+  const { currentSection, serviceStep, navigateTo } = useTransition();
   const [hoveredSection, setHoveredSection] = useState<number | null>(null);
-
-  const isNavigating = status === 'TRANSICIONANDO';
-  const canNavigate = hudRevealed || currentSection >= 4;
 
   // Formato do bloco solicitado com 5 seções e 5 serviços:
   // Hero: [ 1 / 5 ]
@@ -88,19 +93,18 @@ export function NavigationHud() {
               const isCurrent = idx === currentSection;
               const isHovered = hoveredSection === idx;
               return (
-                <button
+                <a
                   key={idx}
-                  type="button"
-                  data-cursor={canNavigate ? 'navegar' : undefined}
-                  disabled={isNavigating || !canNavigate}
-                  onClick={() => canNavigate && navigateTo(idx, 0)}
-                  onMouseEnter={() => canNavigate && setHoveredSection(idx)}
+                  href={`#secao-${SECTION_SLUGS[idx]}`}
+                  data-cursor="navegar"
+                  aria-current={isCurrent ? 'true' : undefined}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigateTo(idx, 0);
+                  }}
+                  onMouseEnter={() => setHoveredSection(idx)}
                   onMouseLeave={() => setHoveredSection(null)}
-                  className={`h-1.5 rounded-full transition-all duration-300 p-0 border-0 focus:outline-none ${
-                    canNavigate
-                      ? 'cursor-pointer hover:brightness-125'
-                      : 'cursor-default opacity-80'
-                  }`}
+                  className="h-1.5 rounded-full transition-all duration-300 p-0 border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 cursor-pointer hover:brightness-125 block"
                   style={{
                     width: isCurrent ? '22px' : isHovered ? '12px' : '6px',
                     background: isCurrent
@@ -114,16 +118,27 @@ export function NavigationHud() {
                       ? `0 0 8px ${SECTION_ACCENTS[idx]}`
                       : 'none',
                   }}
-                  title={
-                    canNavigate
-                      ? `Ir para ${SECTION_NAMES[idx]}`
-                      : `Seção ${idx + 1}: ${SECTION_NAMES[idx]}`
-                  }
-                />
+                  title={`Ir para ${SECTION_NAMES[idx]}`}
+                >
+                  <span className="sr-only">{SECTION_NAMES[idx]}</span>
+                </a>
               );
             })}
           </div>
         </div>
+
+        {/* Navegação para as demais páginas do site — sempre acessível por teclado */}
+        <nav aria-label="Páginas do site" className="flex items-center gap-2.5 pt-1.5 mt-0.5 border-t border-white/10">
+          {SITE_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="font-mono text-[9px] uppercase tracking-wider text-white/50 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </aside>
   );
