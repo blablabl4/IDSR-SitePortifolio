@@ -199,10 +199,15 @@ interface QuemPodeUsarModalProps {
 
 export function QuemPodeUsarModal({ isOpen, onClose, defaultNichoId = 'saude' }: QuemPodeUsarModalProps) {
   const [selectedNichoId, setSelectedNichoId] = useState<string>(defaultNichoId);
-
-  useEffect(() => {
-    if (defaultNichoId) setSelectedNichoId(defaultNichoId);
-  }, [defaultNichoId]);
+  // "Ajustar estado quando uma prop muda" (padrão oficial do React, não um useEffect):
+  // quando o modal reabre com um defaultNichoId diferente, o nicho selecionado
+  // precisa acompanhar — mas o usuário também pode trocar de nicho clicando nas abas.
+  // Comparar contra o valor anterior durante o render evita o setState síncrono no efeito.
+  const [prevDefaultNichoId, setPrevDefaultNichoId] = useState(defaultNichoId);
+  if (defaultNichoId !== prevDefaultNichoId) {
+    setPrevDefaultNichoId(defaultNichoId);
+    setSelectedNichoId(defaultNichoId);
+  }
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
