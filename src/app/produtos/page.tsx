@@ -159,14 +159,12 @@ export default function ProdutosPage() {
         }
     ];
 
-    // Lê o hash da URL já no estado inicial (em vez de montar sempre com 'automacoes'
-    // e corrigir depois num efeito) — evita o setState síncrono dentro do useEffect
-    // e o "flash" do produto errado expandido antes da correção.
-    const [expandedProduct, setExpandedProduct] = useState<string | null>(() => {
-        if (typeof window === 'undefined') return 'automacoes';
-        const hash = window.location.hash.replace('#', '');
-        return products.some(p => p.id === hash) ? hash : 'automacoes';
-    });
+    // O servidor nunca vê o hash da URL (fragmentos não são enviados em requisições HTTP),
+    // então o estado inicial tem que ser igual nos dois lados ('automacoes') pra não dar
+    // hydration mismatch. A correção pelo hash só pode acontecer no cliente, depois do
+    // primeiro paint — por isso o setState mora dentro do próprio timer do scroll (callback
+    // assíncrono), não solto no corpo do efeito.
+    const [expandedProduct, setExpandedProduct] = useState<string | null>('automacoes');
 
     useEffect(() => {
         // products é recriado a cada render (não memoizado); incluir como dep faria
@@ -174,6 +172,7 @@ export default function ProdutosPage() {
         const hash = window.location.hash.replace('#', '');
         if (hash && products.some(p => p.id === hash)) {
             const timer = setTimeout(() => {
+                setExpandedProduct(hash);
                 document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
             return () => clearTimeout(timer);
