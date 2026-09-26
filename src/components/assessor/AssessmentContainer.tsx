@@ -17,7 +17,7 @@ export function AssessmentContainer({ initialUserMessage }: Props) {
         if (initialUserMessage && messages.length === 0) {
             handleUserText(initialUserMessage);
         }
-    }, [initialUserMessage]);
+    }, [initialUserMessage, messages.length, handleUserText]);
 
     return (
         <div className="w-full h-full flex flex-col text-[#E7ECEF]">
