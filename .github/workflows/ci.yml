@@ -19,9 +19,7 @@ jobs:
 
       - run: npm ci
 
-      # remover no P0 #7
       - run: npm run lint
-        continue-on-error: true
 
       - run: npx tsc --noEmit
 
