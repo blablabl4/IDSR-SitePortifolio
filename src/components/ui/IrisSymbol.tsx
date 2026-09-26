@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 
 export type IrisState = 'closed' | 'opening' | 'open';
 
@@ -21,8 +21,12 @@ export function IrisSymbol({ size = 40, state = 'closed', className = '' }: Iris
   const offset = isClosed ? 0 : isOpening ? 4 : 8;
   const rotation = isClosed ? 0 : isOpening ? 15 : 45;
 
-  const clipId = `iris-clip-${size}-${Math.random().toString(36).slice(2, 7)}`;
-  const gradientId = `aurora-core-${size}-${Math.random().toString(36).slice(2, 7)}`;
+  // useId gera um id único e estável (seguro em SSR) — Math.random() no corpo do
+  // componente violava a regra de pureza do render (react-hooks/purity) e podia
+  // gerar clipPaths/gradientes divergentes entre servidor e cliente.
+  const uid = useId();
+  const clipId = `iris-clip-${size}-${uid}`;
+  const gradientId = `aurora-core-${size}-${uid}`;
 
   return (
     <svg
