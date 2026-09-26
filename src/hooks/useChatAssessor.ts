@@ -11,14 +11,17 @@ export function useChatAssessor() {
     const [lastProcessedMessageId, setLastProcessedMessageId] = useState<string | null>(null);
     const [awaitingNextQuestion, setAwaitingNextQuestion] = useState(false);
 
-    // Hook for "Diagnosticar Agora" button or explicit start
-    const startDiagnosis = () => {
-        if (hasStarted) return;
-        setHasStarted(true);
-        initFlow();
-    };
+    const addBotMessage = useCallback((text: string, type: 'text' | 'options' = 'text', options: { label: string; value: SelectionValue }[] = []) => {
+        const id = Math.random().toString(36).substr(2, 9);
+        setMessages(prev => [...prev, { id, role: 'bot', text, type, options }]);
+    }, []);
 
-    const initFlow = () => {
+    const addUserMessage = useCallback((text: string) => {
+        const id = Math.random().toString(36).substr(2, 9);
+        setMessages(prev => [...prev, { id, role: 'user', text }]);
+    }, []);
+
+    const initFlow = useCallback(() => {
         setIsTyping(true);
         setTimeout(() => {
             setIsTyping(false);
@@ -35,27 +38,24 @@ export function useChatAssessor() {
                 ]);
             }, 800);
         }, 600);
+    }, [addBotMessage]);
+
+    // Hook for "Diagnosticar Agora" button or explicit start
+    const startDiagnosis = () => {
+        if (hasStarted) return;
+        setHasStarted(true);
+        initFlow();
     };
 
     // Handle open text from user (e.g. from Home Input)
-    const handleUserText = (text: string) => {
+    const handleUserText = useCallback((text: string) => {
         addUserMessage(text);
         if (!hasStarted) {
             setHasStarted(true);
             initFlow(); // Treat first message as "Start" trigger
         }
         // If already started, we would need NLP to parse. For MVP, we proceed flow.
-    };
-
-    const addBotMessage = useCallback((text: string, type: 'text' | 'options' = 'text', options: { label: string; value: SelectionValue }[] = []) => {
-        const id = Math.random().toString(36).substr(2, 9);
-        setMessages(prev => [...prev, { id, role: 'bot', text, type, options }]);
-    }, []);
-
-    const addUserMessage = useCallback((text: string) => {
-        const id = Math.random().toString(36).substr(2, 9);
-        setMessages(prev => [...prev, { id, role: 'user', text }]);
-    }, []);
+    }, [hasStarted, addUserMessage, initFlow]);
 
     const askNextQuestion = useCallback(() => {
         const s = assessor.state;
