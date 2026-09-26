@@ -27,43 +27,50 @@ export function ParticleSceneCanvas() {
   const [isBlurred, setIsBlurred] = React.useState(false);
 
   useEffect(() => {
-    if (status === 'TRANSICIONANDO' || status === 'REBOBINANDO' || !introExploded) {
-      setIsBlurred(false);
-    } else if (status === 'IDLE_NA_SECAO' && introExploded) {
+    if (status === 'IDLE_NA_SECAO' && introExploded) {
       // Pequeno delay para os blocos terminarem visualmente o encaixe antes de aplicar o blur
       const timer = setTimeout(() => {
         setIsBlurred(true);
       }, 120);
-      return () => clearTimeout(timer);
+      // Ao sair do IDLE (ou desmontar), cancela o timer pendente e volta ao nítido —
+      // equivalente ao "else" de antes, mas dentro do cleanup em vez de setState síncrono no corpo do efeito
+      return () => {
+        clearTimeout(timer);
+        setIsBlurred(false);
+      };
     }
   }, [status, introExploded]);
 
-  const progressRef = useRef(progress);
-  progressRef.current = progress;
+  // "Latest ref" pattern: o loop de animação (useEffect com [] abaixo) roda fora do
+  // ciclo de render do React e precisa ler sempre o valor mais recente de progress/
+  // currentSection/etc. sem recriar a cena Three.js a cada mudança. Escrever nos refs
+  // direto no corpo do componente violava a regra de pureza do render (react-hooks/refs);
+  // agora a escrita acontece num efeito, depois que o render já terminou.
+  const stateRef = useRef({
+    progress,
+    currentSection,
+    targetSection,
+    serviceStep,
+    targetServiceStep,
+    direction,
+    status,
+    introExploded,
+    isIntroGenesis,
+  });
 
-  const currentSectionRef = useRef(currentSection);
-  currentSectionRef.current = currentSection;
-
-  const targetSectionRef = useRef(targetSection);
-  targetSectionRef.current = targetSection;
-
-  const serviceStepRef = useRef(serviceStep);
-  serviceStepRef.current = serviceStep;
-
-  const targetServiceStepRef = useRef(targetServiceStep);
-  targetServiceStepRef.current = targetServiceStep;
-
-  const directionRef = useRef(direction);
-  directionRef.current = direction;
-
-  const statusRef = useRef(status);
-  statusRef.current = status;
-
-  const introExplodedRef = useRef(introExploded);
-  introExplodedRef.current = introExploded;
-
-  const isIntroGenesisRef = useRef(isIntroGenesis);
-  isIntroGenesisRef.current = isIntroGenesis;
+  useEffect(() => {
+    stateRef.current = {
+      progress,
+      currentSection,
+      targetSection,
+      serviceStep,
+      targetServiceStep,
+      direction,
+      status,
+      introExploded,
+      isIntroGenesis,
+    };
+  });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -345,11 +352,12 @@ export function ParticleSceneCanvas() {
 
     const render = () => {
       const elapsedTime = clock.getElapsedTime();
-      const p = progressRef.current;
-      const curSec = currentSectionRef.current;
-      const curStep = serviceStepRef.current;
-      const isRebobinando = statusRef.current === 'REBOBINANDO';
-      const isIdle = statusRef.current === 'IDLE_NA_SECAO';
+      const s = stateRef.current;
+      const p = s.progress;
+      const curSec = s.currentSection;
+      const curStep = s.serviceStep;
+      const isRebobinando = s.status === 'REBOBINANDO';
+      const isIdle = s.status === 'IDLE_NA_SECAO';
 
       // Quando a seção está em repouso (IDLE), o progresso é ESTRITAMENTE 0.0!
       // Isso elimina 100% qualquer corte para segunda animação ou blocos se remontando de fora para dentro!
@@ -366,8 +374,8 @@ export function ParticleSceneCanvas() {
 
       // Identifica se a transição atual é mudança de seção (EXPLOSÃO 3D) ou entre serviços (GLITCH)
       // Funciona bidirecionalmente (avançando ou retrocedendo de trás para frente)
-      const targetSec = targetSectionRef.current;
-      const targetStep = targetServiceStepRef.current;
+      const targetSec = s.targetSection;
+      const targetStep = s.targetServiceStep;
 
       let isSectionTransition = false;
       let isServiceInternalGlitch = false;
@@ -410,7 +418,7 @@ export function ParticleSceneCanvas() {
       // Seção: nos primeiros 35% de progresso, explode na cor de saída; de 35% a 46% migra para o tema de destino.
       // Serviços (glitch breve): a cor migra rapidamente entre 0.10 e 0.42
       let colorProgress = 0.0;
-      if (statusRef.current === 'TRANSICIONANDO' || isRebobinando) {
+      if (s.status === 'TRANSICIONANDO' || isRebobinando) {
         if (isSectionTransition) {
           colorProgress = Math.min(1.0, Math.max(0.0, (smoothProgress - 0.35) / 0.11));
         } else {
@@ -430,8 +438,8 @@ export function ParticleSceneCanvas() {
       blockMaterial.uniforms.uProgress.value = smoothProgress;
       blockMaterial.uniforms.uGlitchIntensity.value = glitchIntensity;
       blockMaterial.uniforms.uIsSectionTransition.value = isSectionTransition ? 1.0 : 0.0;
-      blockMaterial.uniforms.uIsIntroGenesis.value = isIntroGenesisRef.current ? 1.0 : 0.0;
-      blockMaterial.uniforms.uIntroExploded.value = introExplodedRef.current ? 1.0 : 0.0;
+      blockMaterial.uniforms.uIsIntroGenesis.value = s.isIntroGenesis ? 1.0 : 0.0;
+      blockMaterial.uniforms.uIntroExploded.value = s.introExploded ? 1.0 : 0.0;
       blockMaterial.uniforms.uExplosionForce.value = isRebobinando ? 2.6 : 1.6;
 
       // Suavização do mouse com inércia física orgânica
