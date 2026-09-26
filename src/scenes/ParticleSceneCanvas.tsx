@@ -77,6 +77,15 @@ export function ParticleSceneCanvas() {
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
 
+    // Cena estática pra quem pede menos movimento ou está em conexão fraca: um único
+    // frame é desenhado e o loop nunca é agendado (nem parallax de mouse). O tier de
+    // partículas por hardware continua se aplicando normalmente.
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const saveData = Boolean(
+      (navigator as unknown as { connection?: { saveData?: boolean } }).connection?.saveData
+    );
+    const isStaticScene = prefersReducedMotion || saveData;
+
     let width = container.clientWidth || window.innerWidth;
     let height = window.visualViewport?.height || container.clientHeight || window.innerHeight;
 
@@ -357,8 +366,10 @@ export function ParticleSceneCanvas() {
       mouse.targetWorldY = 9999;
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseleave', handleMouseLeave);
+    if (!isStaticScene) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseleave', handleMouseLeave);
+    }
 
     // 7. Loop de Renderização & Ticker
     // Orçamento de GPU: pausa de verdade (nada de requestAnimationFrame) quando a aba
@@ -366,7 +377,7 @@ export function ParticleSceneCanvas() {
     let animationFrameId: number | null = null;
     let isTabVisible = !document.hidden;
     let isInViewport = true;
-    const shouldRender = () => isTabVisible && isInViewport;
+    const shouldRender = () => !isStaticScene && isTabVisible && isInViewport;
     const clock = new THREE.Clock();
     let smoothProgress = 0;
 
