@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useTransition } from '@/context/TransitionContext';
 import { ParticleSceneCanvas } from '@/scenes/ParticleSceneCanvas';
 import { IntroGeneseHero } from './IntroGeneseHero';
@@ -14,16 +14,10 @@ import { IntroGenesisSplash } from './IntroGenesisSplash';
 
 export function SitePrincipalStage() {
   const { currentSection, status, introExploded, isIntroGenesis, startGenesis } = useTransition();
-  const [textReady, setTextReady] = useState(false);
-
-  useEffect(() => {
-    if (status === 'TRANSICIONANDO' || status === 'REBOBINANDO' || !introExploded) {
-      setTextReady(false);
-    } else if (status === 'IDLE_NA_SECAO' && introExploded) {
-      // Assim que os blocos travam no lugar, o texto já surge sem animações extras
-      setTextReady(true);
-    }
-  }, [status, introExploded]);
+  // Totalmente derivado de status/introExploded (só existem os 3 valores de status
+  // tratados abaixo) — não precisa de estado nem de efeito, e o texto já
+  // surge assim que os blocos travam no lugar, sem animações extras.
+  const textReady = status === 'IDLE_NA_SECAO' && introExploded;
 
   const renderCurrentSection = () => {
     switch (currentSection) {
