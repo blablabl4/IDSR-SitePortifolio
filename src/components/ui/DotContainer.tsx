@@ -16,6 +16,9 @@ export function DotContainer({ children, className }: DotContainerProps) {
 
     // Intersection Observer to pause when off-screen
     useEffect(() => {
+        // Copia o nó pra uma variável local: por ora do cleanup rodar, containerRef.current
+        // já pode apontar pra outro nó (ou null), então usamos sempre o mesmo nó observado.
+        const container = containerRef.current;
         const observer = new IntersectionObserver(
             ([entry]) => {
                 setIsVisible(entry.isIntersecting);
@@ -23,13 +26,13 @@ export function DotContainer({ children, className }: DotContainerProps) {
             { threshold: 0.1 }
         );
 
-        if (containerRef.current) {
-            observer.observe(containerRef.current);
+        if (container) {
+            observer.observe(container);
         }
 
         return () => {
-            if (containerRef.current) {
-                observer.unobserve(containerRef.current);
+            if (container) {
+                observer.unobserve(container);
             }
         };
     }, []);
