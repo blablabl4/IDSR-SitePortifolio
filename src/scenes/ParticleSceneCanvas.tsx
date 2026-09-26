@@ -89,7 +89,7 @@ export function ParticleSceneCanvas() {
       preserveDrawingBuffer: true,
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
     // 2. Cena & Câmera em Perspectiva Cinemática 3D
     const scene = new THREE.Scene();
@@ -121,13 +121,28 @@ export function ParticleSceneCanvas() {
     postScene.add(postQuad);
 
     // 4. Criação do Mural 3D em TELA INTEIRA de CUBOS (Rogier Architecture)
-    // 64 colunas x 32 linhas = 2048 CUBOS cobrindo 100% da viewport de borda a borda com sangria
-    const COLS = 64;
-    const ROWS = 32;
+    // Orçamento de GPU em 3 níveis por hardwareConcurrency/deviceMemory (deviceMemory
+    // não existe no Safari/Firefox — cai no nível médio quando ausente). Cobre 100% da
+    // viewport de borda a borda com sangria em qualquer nível, só muda a densidade.
+    const cores = navigator.hardwareConcurrency || 4;
+    const memory = (navigator as unknown as { deviceMemory?: number }).deviceMemory ?? 4;
+    let COLS: number;
+    let ROWS: number;
+    if (cores >= 8 && memory >= 8) {
+      COLS = 64; ROWS = 32; // alto: 2048 cubos
+    } else if (cores >= 4 && memory >= 4) {
+      COLS = 48; ROWS = 24; // médio: 1152 cubos
+    } else {
+      COLS = 32; ROWS = 16; // baixo: 512 cubos
+    }
     const BLOCK_COUNT = COLS * ROWS;
+    // COLS:ROWS mantém sempre a razão 2:1 entre os 3 níveis, então esse fator escala X e Y
+    // igualmente e o mural continua cobrindo 100% da viewport de borda a borda — só com
+    // cubos proporcionalmente maiores (e mais escassos) nos níveis mais baixos.
+    const TIER_SCALE = 64 / COLS;
 
-    // CUBOS TRIDIMENSIONAIS: largura = altura = profundidade (19.5 x 19.5 x 19.5)
-    const CUBE_SIZE = 19.5;
+    // CUBOS TRIDIMENSIONAIS: largura = altura = profundidade (19.5 x 19.5 x 19.5 no nível alto)
+    const CUBE_SIZE = 19.5 * TIER_SCALE;
     const baseBoxGeometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
     const instancedGeometry = new THREE.InstancedBufferGeometry();
     instancedGeometry.index = baseBoxGeometry.index;
@@ -147,8 +162,8 @@ export function ParticleSceneCanvas() {
     const arrivalOrders = new Float32Array(BLOCK_COUNT);
 
     // Espaçamento de 25.0 com frestas de 5.5 units entre os cubos para expor a profundidade
-    const STEP_X = 25.0;
-    const STEP_Y = 25.0;
+    const STEP_X = 25.0 * TIER_SCALE;
+    const STEP_Y = 25.0 * TIER_SCALE;
     const TOTAL_WIDTH = (COLS - 1) * STEP_X;
     const TOTAL_HEIGHT = (ROWS - 1) * STEP_Y;
 
@@ -346,7 +361,12 @@ export function ParticleSceneCanvas() {
     window.addEventListener('mouseleave', handleMouseLeave);
 
     // 7. Loop de Renderização & Ticker
-    let animationFrameId: number;
+    // Orçamento de GPU: pausa de verdade (nada de requestAnimationFrame) quando a aba
+    // está oculta ou quando o canvas sai da viewport, em vez de só pular o trabalho.
+    let animationFrameId: number | null = null;
+    let isTabVisible = !document.hidden;
+    let isInViewport = true;
+    const shouldRender = () => isTabVisible && isInViewport;
     const clock = new THREE.Clock();
     let smoothProgress = 0;
 
@@ -458,8 +478,31 @@ export function ParticleSceneCanvas() {
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
 
-      animationFrameId = requestAnimationFrame(render);
+      // Só reagenda o próximo frame se a aba estiver visível e o canvas na viewport —
+      // caso contrário o loop para de verdade (nenhum requestAnimationFrame pendente).
+      animationFrameId = shouldRender() ? requestAnimationFrame(render) : null;
     };
+
+    const resumeRenderIfNeeded = () => {
+      if (animationFrameId === null && shouldRender()) {
+        animationFrameId = requestAnimationFrame(render);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      isTabVisible = !document.hidden;
+      resumeRenderIfNeeded();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const viewportObserver = new IntersectionObserver(
+      ([entry]) => {
+        isInViewport = entry.isIntersecting;
+        resumeRenderIfNeeded();
+      },
+      { threshold: 0 }
+    );
+    viewportObserver.observe(container);
 
     render();
 
@@ -481,7 +524,9 @@ export function ParticleSceneCanvas() {
     window.visualViewport?.addEventListener('resize', handleResize);
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      viewportObserver.disconnect();
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('resize', handleResize);
