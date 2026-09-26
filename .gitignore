@@ -43,3 +43,6 @@ next-env.d.ts
 
 # assets pesados (nunca versionar)
 *.gif
+
+# relatórios locais do lighthouse
+lighthouse-*.json
