@@ -252,6 +252,10 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
   // Permite rolar devagar e ver cada frame e bloco se mover em tempo real
   useEffect(() => {
     let touchStartY = 0;
+    // Copiado no início do efeito porque nada dentro dele reatribui esse ref (fica
+    // sempre null); ler scrollTimeoutRef.current de novo no cleanup é o padrão que
+    // o exhaustive-deps sinaliza como arriscado quando o valor pode ter mudado.
+    const scrollTimeout = scrollTimeoutRef.current;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -391,7 +395,7 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
       window.removeEventListener('wheel', handleWheel);
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
       if (ghostResetTimerRef.current) clearTimeout(ghostResetTimerRef.current);
     };
   }, [completeForwardTransition, triggerTransitionBackward, startGenesis]);
