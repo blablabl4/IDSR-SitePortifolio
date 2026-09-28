@@ -93,6 +93,10 @@ export interface OfferPlan {
   price: string;
   period: string;
   description: string;
+  /** O que está incluso no plano (copy de /precos). */
+  features: string[];
+  /** Texto do botão de contratação. */
+  cta: string;
   highlight: boolean;
 }
 
@@ -108,6 +112,16 @@ export const OFFER_PLANS: OfferPlan[] = [
     price: STARTER_PRICE,
     period: STARTER_PERIOD,
     description: 'Para empresas que perdem vendas fora do horário e precisam de atendimento imediato 24/7.',
+    features: [
+      '1 Solução IDSR (Automação Comercial 24/7 no WhatsApp ou Robô de Dados)',
+      'Até 1.500 conversas ativas/mês no WhatsApp',
+      'Qualificação automática de leads com triagem de perfil',
+      'Notificação imediata para equipe no celular',
+      'Onboarding assistido e ativação em até 7 dias úteis',
+      'Suporte técnico via WhatsApp (SLA 8h úteis)',
+      'Garantia de estabilidade e uptime 99.9%',
+    ],
+    cta: 'Contratar Plano Starter',
     highlight: false,
   },
   {
@@ -117,6 +131,16 @@ export const OFFER_PLANS: OfferPlan[] = [
     price: 'R$ 1.997',
     period: '/mês',
     description: 'A máquina completa para quem investe em tráfego pago, precisa de follow-up implacável e zero no-show.',
+    features: [
+      'Stack Integrado: Automação 24/7 + Agente de IA com RAG + Dashboard Analítico',
+      'Volume de até 6.000 conversas ativas/mês',
+      'Régua ativa de follow-up para orçamentos e leads parados',
+      'Confirmação automática de agendamentos (reduz no-show em até 80%)',
+      'Integrações com Google Sheets, Webhooks e CRM atual',
+      'Suporte prioritário diretamente com engenheiro (SLA 4h úteis)',
+      'Painel executivo com métricas em tempo real de faturamento e conversão',
+    ],
+    cta: 'Escalar com Plano Growth',
     highlight: true,
   },
   {
@@ -126,7 +150,70 @@ export const OFFER_PLANS: OfferPlan[] = [
     price: 'Sob Blueprint',
     period: 'Escopo customizado',
     description: 'Para operações complexas que demandam integração com ERPs legados, alta concorrência e governança.',
+    features: [
+      'Todos os 5 pilares IDSR: Automações + Agentes IA + Robôs RPA + Sistemas Sob Medida',
+      'Volume de conversas ilimitado e alta vazão para grandes volumes',
+      'Integração dedicada com ERPs (Bling, Tiny, Omie, TOTVS, SAP)',
+      'Agentes de IA com guardrails avançados e regras de negócio proprietárias',
+      'SLA contratual garantido com canal direto de emergência',
+      'Treinamento de equipe e documentação técnica completa',
+      'Acompanhamento de arquitetura e performance com engenheiro sênior',
+    ],
+    cta: 'Solicitar Blueprint Dedicado',
     highlight: false,
+  },
+];
+
+/** Chamada da seção de preços (copy de /precos). */
+export const OFFER_PRICING_INTRO = {
+  title: 'Planos Transparentes, Retorno Imediato',
+  description:
+    'Elimine o custo oculto de leads perdidos por demora no atendimento e processos manuais. Escolha o plano ideal para a escala da sua empresa.',
+};
+
+/** Garantias que valem para todos os planos (copy de /precos). */
+export const OFFER_GUARANTEES = [
+  { title: 'Onboarding Assistido', detail: 'Configuramos e testamos tudo com você' },
+  { title: 'Ativação Rápida', detail: 'Seu sistema rodando em dias, não meses' },
+  { title: 'Suporte com Engenheiro', detail: 'Atendimento direto com quem constrói' },
+];
+
+export interface OfferFaqItem {
+  question: string;
+  answer: string;
+}
+
+/** Perguntas frequentes sobre contratação e implantação (copy de /precos). */
+export const OFFER_PRICING_FAQ: OfferFaqItem[] = [
+  {
+    question: 'Em quanto tempo a automação começa a rodar na minha empresa?',
+    answer:
+      'Nos planos Starter e Growth, o onboarding e ativação ocorrem entre 5 e 10 dias úteis. No plano Enterprise, definimos um cronograma ágil por marcos de entrega para colocar a primeira versão no ar o mais rápido possível.',
+  },
+  {
+    question: 'Preciso trocar o número de WhatsApp que minha empresa já usa?',
+    answer:
+      'Não! Nós conectamos a automação diretamente ao seu número comercial atual. Você não perde nenhum contato, histórico ou cliente da sua base.',
+  },
+  {
+    question: 'E se minha equipe não tiver conhecimento técnico para mexer?',
+    answer:
+      'A IDSR foi construída exatamente para eliminar a complexidade. Sua equipe utiliza ferramentas limpas e intuitivas, e nós entregamos todo o treinamento prático e suporte para que todos se sintam seguros desde o primeiro dia.',
+  },
+  {
+    question: 'O que acontece quando um cliente faz uma pergunta complexa que a IA não sabe responder?',
+    answer:
+      'Nossos agentes contam com guardrails rígidos anti-alucinação. Quando uma dúvida foge ao escopo ou exige negociação humana, a conversa é transbordada suavemente para o atendente responsável, acompanhada de um resumo do histórico do lead.',
+  },
+  {
+    question: 'Como funciona o contrato? Tem fidelidade ou multa de cancelamento?',
+    answer:
+      'Trabalhamos com transparência radical. Nossos contratos padrão têm ciclos mensais ou semestrais claros, sem letras miúdas ou pegadinhas. Conquistamos a permanência dos nossos clientes pela estabilidade do software e pelo aumento de receita entregue.',
+  },
+  {
+    question: 'Posso começar com um produto e adicionar outros depois?',
+    answer:
+      'Com certeza! Toda a infraestrutura da IDSR é modular. Você pode começar resolvendo o atendimento inicial no WhatsApp e, conforme o tráfego e as vendas aumentarem, plugar o CRM, a agenda e as integrações de ERP.',
   },
 ];
 

@@ -5,6 +5,23 @@ import { renderToString } from 'react-dom/server';
 import React from 'react';
 import Home from '@/app/page';
 import { SCENE_SECTIONS } from '@/lib/scene-sections';
+import { OFFER_PLANS, OFFER_PRICING_FAQ, STARTER_PRICE } from '@/lib/offer';
+
+/** Texto do HTML sem tags e com espaços normalizados — como um crawler leria. */
+function htmlText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ');
+}
+
+/** DustText quebra o texto em um <span> por caractere/palavra; no HTML isso vira
+ * espaços extras entre letras. Compara ignorando todo whitespace. */
+function squash(s: string): string {
+  return s.replace(/\s+/g, '');
+}
 
 describe('Home page (render server-side)', () => {
   it('renderiza a headline e um link real por seção (no mínimo)', () => {
@@ -35,6 +52,20 @@ describe('Home page (render server-side)', () => {
       for (const stepId of section.stepIds ?? []) {
         expect(html, `passo ${stepId}`).toContain(`id="${stepId}"`);
       }
+    }
+  });
+
+  it('HTML do servidor tem os 3 planos, o preço Starter e as 6 FAQs (inclusive passos ocultos)', () => {
+    const text = squash(htmlText(renderToString(<Home />)));
+    expect(text).toContain(squash(STARTER_PRICE));
+    for (const plan of OFFER_PLANS) {
+      expect(text).toContain(squash(plan.name));
+      expect(text).toContain(squash(plan.price));
+      for (const feature of plan.features) expect(text).toContain(squash(feature));
+    }
+    for (const faq of OFFER_PRICING_FAQ) {
+      expect(text).toContain(squash(faq.question));
+      expect(text).toContain(squash(faq.answer));
     }
   });
 
