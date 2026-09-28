@@ -1,73 +1,55 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { useTransition, SECTION_SLUGS } from '@/context/TransitionContext';
-
-const SECTION_NAMES: Record<number, string> = {
-  0: 'HERO',
-  1: 'SERVIÇOS',
-  2: 'QUEM PODE USAR',
-  3: 'MÉTODO',
-  4: 'CONTATO',
-};
-
-const SITE_LINKS = [
-  { href: '/produtos', label: 'Produtos' },
-  { href: '/precos', label: 'Preços' },
-  { href: '/sobre', label: 'Sobre' },
-  { href: '/contato', label: 'Contato' },
-];
-
-const SECTION_ACCENTS: Record<number, string> = {
-  0: '#38e0e0', // Hero
-  1: '#06b6d4', // Serviços (base)
-  2: '#8b5cf6', // Quem Pode Usar
-  3: '#10b981', // Método
-  4: '#38bdf8', // Contato
-};
+import { useTransition } from '@/context/TransitionContext';
+import { SCENE_SECTIONS, SERVICES_SECTION_INDEX, TOTAL_SECTIONS, stepCountOf } from '@/lib/scene-sections';
 
 const SERVICE_ACCENTS = ['#38e0e0', '#8b5cf6', '#10b981', '#ec4899', '#f59e0b'];
 
-export function NavigationHud() {
-  const { currentSection, serviceStep, navigateTo } = useTransition();
-  const [hoveredSection, setHoveredSection] = useState<number | null>(null);
+interface NavigationHudProps {
+  /**
+   * Prefixo dos links das âncoras. Vazio na home (`#slug`, navegação dentro da cena);
+   * '/' fora dela (`/#slug`, ex.: termos e privacidade), onde não há seção pra rolar.
+   */
+  hrefBase?: '' | '/';
+  /** Rótulo fixo quando o HUD está fora da cena (ex.: 'TERMOS'); nenhum marcador fica ativo. */
+  pageLabel?: string;
+}
 
-  // Formato do bloco solicitado com 5 seções e 5 serviços:
-  // Hero: [ 1 / 5 ]
-  // Serviços: [ 2.1 / 5 ], [ 2.2 / 5 ], [ 2.3 / 5 ], [ 2.4 / 5 ], [ 2.5 / 5 ]
-  // Quem Pode Usar: [ 3 / 5 ]
-  // Método: [ 4 / 5 ]
-  // Contato: [ 5 / 5 ]
-  let pageNumberText = String(currentSection + 1);
-  if (currentSection === 1) {
-    pageNumberText = `2.${serviceStep + 1}`;
+export function NavigationHud({ hrefBase = '', pageLabel }: NavigationHudProps = {}) {
+  const { currentSection, sectionStep, navigateTo } = useTransition();
+  const [hoveredSection, setHoveredSection] = useState<number | null>(null);
+  const inScene = pageLabel === undefined;
+
+  // Contador [n / total]: numa seção com passos ganha o sub-passo (ex.: [2.3 / 8]).
+  let pageNumberText = inScene ? String(currentSection + 1) : '—';
+  if (inScene && stepCountOf(currentSection) > 1) {
+    pageNumberText = `${currentSection + 1}.${sectionStep + 1}`;
   }
 
+  const sectionAccent = (idx: number) => SCENE_SECTIONS[idx]?.accent ?? '#38e0e0';
+  const sectionLabel = (idx: number) => SCENE_SECTIONS[idx]?.label ?? 'IDSR';
+
   // Cor temática da seção / serviço
-  const accentColor =
-    currentSection === 1
-      ? SERVICE_ACCENTS[serviceStep] || '#06b6d4'
-      : SECTION_ACCENTS[currentSection] || '#38e0e0';
+  const accentColor = !inScene
+    ? '#38e0e0'
+    : currentSection === SERVICES_SECTION_INDEX
+    ? SERVICE_ACCENTS[sectionStep] || sectionAccent(currentSection)
+    : sectionAccent(currentSection);
 
-  const previewName =
-    hoveredSection !== null
-      ? SECTION_NAMES[hoveredSection]
-      : SECTION_NAMES[currentSection] || 'IDSR';
-
-  const previewColor =
-    hoveredSection !== null
-      ? SECTION_ACCENTS[hoveredSection] || '#38e0e0'
-      : accentColor;
+  const currentName = inScene ? sectionLabel(currentSection) : pageLabel;
+  const previewName = hoveredSection !== null ? sectionLabel(hoveredSection) : currentName;
+  const previewColor = hoveredSection !== null ? sectionAccent(hoveredSection) : accentColor;
 
   return (
     <aside
       className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 md:right-8 z-50 select-none pointer-events-auto"
       aria-label="Navegação e Marcador IDSR"
     >
-      <div
+      <nav
+        aria-label="Seções do site"
         className="px-3.5 py-2 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md shadow-[0_8px_32px_0_rgba(0,0,0,0.6),inset_0_1px_1px_0_rgba(255,255,255,0.15)] flex flex-col gap-0.5 shrink-0 transition-all duration-300"
-        title={`Página ${pageNumberText} de 5 - ${SECTION_NAMES[currentSection]}`}
+        title={`Página ${pageNumberText} de ${TOTAL_SECTIONS} - ${currentName}`}
       >
         {/* Prévia do nome no mesmo modal em cima do bloco */}
         <div className="flex items-center justify-between min-w-[130px]">
@@ -79,26 +61,28 @@ export function NavigationHud() {
           </span>
         </div>
 
-        {/* Linha do Bloco [ X / 5 ] com as 5 bolinhas */}
+        {/* Linha do Bloco [ X / N ] com um marcador por seção — cada um é link real pra âncora */}
         <div className="flex items-center gap-3">
           <span
             className="font-mono text-[11px] sm:text-xs font-bold tracking-widest text-white/90 whitespace-nowrap"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            [{pageNumberText} / 5]
+            [{pageNumberText} / {TOTAL_SECTIONS}]
           </span>
 
           <div className="flex gap-1.5 items-center">
-            {[0, 1, 2, 3, 4].map((idx) => {
-              const isCurrent = idx === currentSection;
+            {SCENE_SECTIONS.map((section, idx) => {
+              const isCurrent = inScene && idx === currentSection;
               const isHovered = hoveredSection === idx;
               return (
                 <a
-                  key={idx}
-                  href={`#secao-${SECTION_SLUGS[idx]}`}
+                  key={section.slug}
+                  href={`${hrefBase}#${section.slug}`}
                   data-cursor="navegar"
                   aria-current={isCurrent ? 'true' : undefined}
                   onClick={(e) => {
+                    // Fora da cena o link segue normal (vai pra /#slug).
+                    if (!inScene) return;
                     e.preventDefault();
                     navigateTo(idx, 0);
                   }}
@@ -110,36 +94,23 @@ export function NavigationHud() {
                     background: isCurrent
                       ? accentColor
                       : isHovered
-                      ? SECTION_ACCENTS[idx]
+                      ? section.accent
                       : 'rgba(255, 255, 255, 0.25)',
                     boxShadow: isCurrent
                       ? `0 0 10px ${accentColor}`
                       : isHovered
-                      ? `0 0 8px ${SECTION_ACCENTS[idx]}`
+                      ? `0 0 8px ${section.accent}`
                       : 'none',
                   }}
-                  title={`Ir para ${SECTION_NAMES[idx]}`}
+                  title={`Ir para ${section.label}`}
                 >
-                  <span className="sr-only">{SECTION_NAMES[idx]}</span>
+                  <span className="sr-only">{section.label}</span>
                 </a>
               );
             })}
           </div>
         </div>
-
-        {/* Navegação para as demais páginas do site — sempre acessível por teclado */}
-        <nav aria-label="Páginas do site" className="flex items-center gap-2.5 pt-1.5 mt-0.5 border-t border-white/10">
-          {SITE_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="font-mono text-[9px] uppercase tracking-wider text-white/50 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
+      </nav>
     </aside>
   );
 }

@@ -2,21 +2,22 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import gsap from 'gsap';
-import { pickActiveSection } from './activeSection';
+import { pickActiveSection, pickActiveSectionStep } from './activeSection';
 import { OFFER_MODULES } from '@/lib/offer';
+import { SECTION_SLUGS, TOTAL_SECTIONS, anchorIdFor, stepCountOf } from '@/lib/scene-sections';
 
-// Slugs usados nos ids/anchors das 5 seções de topo — offer.ts é a fonte de verdade
-// pros slugs de serviço (mesmos de /produtos), então os dois lados linkam pro mesmo lugar.
-export const SECTION_SLUGS = ['hero', 'servicos', 'quem-pode-usar', 'metodologia', 'contato'];
+// Slugs das seções de topo vêm de scene-sections.ts (id do <section> = âncora pública
+// /#slug); offer.ts é a fonte de verdade pros slugs de serviço (#servico-<slug>).
+export { SECTION_SLUGS };
 export const SERVICE_SLUGS = OFFER_MODULES.map((m) => m.slug);
 
 export interface TransitionState {
   progress: number; // 0.0 a 1.0 durante a explosão/glitch de transição (não mais scrub contínuo de scroll)
-  currentSection: number; // 0: Intro/Hero, 1: Serviços, 2: Quem Pode Usar, 3: Metodologia, 4: Contato
+  currentSection: number; // índice em SCENE_SECTIONS (lib/scene-sections.ts)
   targetSection: number;
-  serviceStep: number; // 0..4 (1 serviço por vez na Seção 1)
-  targetServiceStep: number; // 0..4
-  totalServices: number;
+  /** Passo dentro da seção atual (serviço, FAQ…); sempre 0 em seções sem passos. */
+  sectionStep: number;
+  targetSectionStep: number;
   direction: 'forward' | 'backward';
   status: 'IDLE_NA_SECAO' | 'TRANSICIONANDO' | 'REBOBINANDO';
   locked: boolean;
@@ -26,24 +27,21 @@ export interface TransitionState {
 }
 
 interface TransitionContextType extends TransitionState {
-  navigateTo: (sectionIndex: number, serviceStepIndex?: number) => void;
+  navigateTo: (sectionIndex: number, stepIndex?: number) => void;
   rewindToSection: (sectionIndex: number) => void;
-  nextService: () => void;
-  prevService: () => void;
+  nextStep: () => void;
+  prevStep: () => void;
   triggerIntroExplode: () => void;
   startGenesis: () => void;
   setProgressManual: (p: number) => void;
-  /** Ref-callback pra cada uma das 5 seções de topo (scroll nativo + IntersectionObserver). */
+  /** Ref-callback pra cada seção de topo (scroll nativo + IntersectionObserver). */
   registerSection: (index: number) => (el: HTMLElement | null) => void;
-  /** Ref-callback pra cada um dos 5 blocos de serviço dentro da seção de Serviços. */
-  registerServiceStep: (index: number) => (el: HTMLElement | null) => void;
+  /** Ref-callback pra cada marcador de passo de uma seção com passos (scene-sections stepIds). */
+  registerStep: (section: number, step: number) => (el: HTMLElement | null) => void;
 }
 
-const TOTAL_SECTIONS = 5; // 0: Hero, 1: Serviços, 2: Quem Pode Usar, 3: Metodologia, 4: Contato
-const TOTAL_SERVICES = 5; // 5 serviços apresentados 1 por vez
-const SERVICES_SECTION_INDEX = 1;
 const SECTION_THRESHOLD = 0.5;
-const SERVICE_THRESHOLD = 0.6;
+const STEP_THRESHOLD = 0.6;
 // Suprime o IntersectionObserver por essa janela depois de um navigateTo() programático,
 // tempo suficiente pro scrollIntoView({behavior:'smooth'}) assentar sem o observer
 // disparando transições espúrias pras seções que ficam no caminho.
@@ -71,9 +69,8 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     progress: 0,
     currentSection: 0,
     targetSection: 0,
-    serviceStep: 0,
-    targetServiceStep: 0,
-    totalServices: TOTAL_SERVICES,
+    sectionStep: 0,
+    targetSectionStep: 0,
     direction: 'forward',
     status: 'IDLE_NA_SECAO',
     locked: false,
@@ -99,45 +96,45 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
   const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Elementos observados: seções de topo (o bloco de Serviços registra os 5 blocos de
-  // serviço, todos como seção 1) e os blocos de serviço (sub-navegação dentro dela).
+  // Elementos observados: seções de topo (numa seção com passos, cada marcador de passo
+  // registra também a seção) e os marcadores de passo (sub-navegação dentro dela).
   const sectionElsRef = useRef(new Map<Element, number>());
-  const serviceElsRef = useRef(new Map<Element, number>());
+  const stepElsRef = useRef(new Map<Element, { section: number; step: number }>());
   const sectionObserverRef = useRef<IntersectionObserver | null>(null);
-  const serviceObserverRef = useRef<IntersectionObserver | null>(null);
+  const stepObserverRef = useRef<IntersectionObserver | null>(null);
 
-  // Dispara a explosão 3D / glitch de transição e só troca currentSection/serviceStep
+  // Dispara a explosão 3D / glitch de transição e só troca currentSection/sectionStep
   // quando o tween termina — o mural continua fazendo a mistura de cores entre o tema
   // atual (currentSection) e o de destino (targetSection) durante o voo, como antes.
   const transitionTo = useCallback((nextSection: number, nextStep: number) => {
     const s = stateRef.current;
-    if (s.currentSection === nextSection && s.serviceStep === nextStep) return;
+    if (s.currentSection === nextSection && s.sectionStep === nextStep) return;
     // O observer pode disparar de novo enquanto o scroll-snap ainda está assentando
     // (múltiplas leves oscilações de ratio antes de estabilizar). Se já existe um tween
     // em andamento rumo a esse MESMO alvo, ignora — senão cada disparo reinicia a
     // animação do zero e ela nunca chega no onComplete que troca currentSection.
     const alreadyHeadingThere =
-      s.status !== 'IDLE_NA_SECAO' && s.targetSection === nextSection && s.targetServiceStep === nextStep;
+      s.status !== 'IDLE_NA_SECAO' && s.targetSection === nextSection && s.targetSectionStep === nextStep;
     if (alreadyHeadingThere) return;
 
     if (activeTweenRef.current) activeTweenRef.current.kill();
 
-    const currentScore = s.currentSection * 10 + s.serviceStep;
-    const targetScore = nextSection * 10 + nextStep;
+    const currentScore = s.currentSection * 100 + s.sectionStep;
+    const targetScore = nextSection * 100 + nextStep;
     const dir: 'forward' | 'backward' = targetScore >= currentScore ? 'forward' : 'backward';
     const isSectionChange = nextSection !== s.currentSection;
 
     setState((prev) => ({
       ...prev,
       targetSection: nextSection,
-      targetServiceStep: nextStep,
+      targetSectionStep: nextStep,
       direction: dir,
       status: dir === 'forward' ? 'TRANSICIONANDO' : 'REBOBINANDO',
       hudRevealed: prev.hudRevealed || nextSection >= TOTAL_SECTIONS - 1,
     }));
 
     const tweenObj = { p: 0 };
-    // Duração breve: ~0.42s para troca de serviço (glitch conciso), ~0.65s pra explosão de seção
+    // Duração breve: ~0.42s para troca de passo (glitch conciso), ~0.65s pra explosão de seção
     const duration = isSectionChange ? 0.65 : 0.42;
 
     activeTweenRef.current = gsap.to(tweenObj, {
@@ -152,7 +149,7 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
         setState((prev) => ({
           ...prev,
           currentSection: nextSection,
-          serviceStep: nextStep,
+          sectionStep: nextStep,
           progress: 0,
           status: 'IDLE_NA_SECAO',
         }));
@@ -165,10 +162,8 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
   // visual na hora, sem esperar o observer — que fica suprimido enquanto o scroll
   // suave em progresso passaria por seções intermediárias.
   const navigateTo = useCallback((targetSec: number, targetStep: number = 0) => {
-    const id =
-      targetSec === SERVICES_SECTION_INDEX
-        ? `servico-${SERVICE_SLUGS[targetStep] ?? targetStep}`
-        : `secao-${SECTION_SLUGS[targetSec] ?? targetSec}`;
+    const id = anchorIdFor(targetSec, targetStep);
+    if (!id) return;
     const el = document.getElementById(id);
     if (!el) return;
 
@@ -202,14 +197,14 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     startGenesis();
   }, [startGenesis]);
 
-  const nextService = useCallback(() => {
+  const nextStep = useCallback(() => {
     const s = stateRef.current;
-    if (s.serviceStep < TOTAL_SERVICES - 1) navigateTo(SERVICES_SECTION_INDEX, s.serviceStep + 1);
+    if (s.sectionStep < stepCountOf(s.currentSection) - 1) navigateTo(s.currentSection, s.sectionStep + 1);
   }, [navigateTo]);
 
-  const prevService = useCallback(() => {
+  const prevStep = useCallback(() => {
     const s = stateRef.current;
-    if (s.serviceStep > 0) navigateTo(SERVICES_SECTION_INDEX, s.serviceStep - 1);
+    if (s.sectionStep > 0) navigateTo(s.currentSection, s.sectionStep - 1);
   }, [navigateTo]);
 
   const setProgressManual = useCallback((p: number) => {
@@ -232,32 +227,26 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
   }, [transitionTo]);
 
   // IntersectionObserver de seções de topo: qual seção está mais visível vira
-  // currentSection. Os 5 blocos de serviço contam todos como seção 1.
+  // currentSection. Numa seção com passos, todos os marcadores contam como ela.
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (suppressObserverRef.current) return;
         const map = sectionElsRef.current;
-        // O observer só reporta as entries que mudaram nesta leva; agrega pelo maior
-        // ratio dentro de cada seção (a de Serviços tem 5 elementos mapeados pro mesmo índice).
-        const ratiosBySection = new Map<number, number>();
-        entries.forEach((entry) => {
-          const idx = map.get(entry.target);
-          if (idx === undefined) return;
-          const prevRatio = ratiosBySection.get(idx) ?? 0;
-          ratiosBySection.set(idx, Math.max(prevRatio, entry.intersectionRatio));
+        // O observer só reporta as entries que mudaram nesta leva; pickActiveSectionStep
+        // agrega pelo marcador mais visível de cada seção e devolve o passo dele — entrar
+        // numa seção com passos rolando de baixo pra cima cai no último passo.
+        const visibilities = entries.flatMap((entry) => {
+          const section = map.get(entry.target);
+          if (section === undefined) return [];
+          const step = stepElsRef.current.get(entry.target)?.step ?? 0;
+          return [{ section, step, ratio: entry.intersectionRatio }];
         });
-        if (ratiosBySection.size === 0) return;
-        const picked = pickActiveSection(
-          Array.from(ratiosBySection, ([index, ratio]) => ({ index, ratio })),
-          SECTION_THRESHOLD
-        );
+        if (visibilities.length === 0) return;
+        const picked = pickActiveSectionStep(visibilities, SECTION_THRESHOLD);
         if (picked === null) return;
-        const s = stateRef.current;
-        if (picked === s.currentSection) return;
-        // Ao entrar na seção de Serviços via scroll natural, mantém o serviceStep atual
-        // (o observer de serviços abaixo cuida de refiná-lo); nas demais, step = 0.
-        scheduleTransition(picked, picked === SERVICES_SECTION_INDEX ? s.serviceStep : 0);
+        if (picked.section === stateRef.current.currentSection) return;
+        scheduleTransition(picked.section, picked.step);
       },
       { threshold: [0, SECTION_THRESHOLD, 1] }
     );
@@ -266,34 +255,34 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     return () => observer.disconnect();
   }, [scheduleTransition]);
 
-  // IntersectionObserver dos blocos de serviço: qual bloco está mais visível vira
-  // serviceStep, só quando a seção ativa já é a de Serviços.
+  // IntersectionObserver dos marcadores de passo: qual passo está mais visível vira
+  // sectionStep, só entre os marcadores da seção que já está ativa.
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (suppressObserverRef.current) return;
-        if (stateRef.current.currentSection !== SERVICES_SECTION_INDEX) return;
-        const map = serviceElsRef.current;
+        const s = stateRef.current;
+        const map = stepElsRef.current;
         const ratiosByStep = new Map<number, number>();
         entries.forEach((entry) => {
-          const idx = map.get(entry.target);
-          if (idx === undefined) return;
-          const prevRatio = ratiosByStep.get(idx) ?? 0;
-          ratiosByStep.set(idx, Math.max(prevRatio, entry.intersectionRatio));
+          const info = map.get(entry.target);
+          if (!info || info.section !== s.currentSection) return;
+          const prevRatio = ratiosByStep.get(info.step) ?? 0;
+          ratiosByStep.set(info.step, Math.max(prevRatio, entry.intersectionRatio));
         });
         if (ratiosByStep.size === 0) return;
         const picked = pickActiveSection(
           Array.from(ratiosByStep, ([index, ratio]) => ({ index, ratio })),
-          SERVICE_THRESHOLD
+          STEP_THRESHOLD
         );
         if (picked === null) return;
-        if (picked === stateRef.current.serviceStep) return;
-        scheduleTransition(SERVICES_SECTION_INDEX, picked);
+        if (picked === s.sectionStep) return;
+        scheduleTransition(s.currentSection, picked);
       },
-      { threshold: [0, SERVICE_THRESHOLD, 1] }
+      { threshold: [0, STEP_THRESHOLD, 1] }
     );
-    serviceObserverRef.current = observer;
-    serviceElsRef.current.forEach((_, el) => observer.observe(el));
+    stepObserverRef.current = observer;
+    stepElsRef.current.forEach((_, el) => observer.observe(el));
     return () => observer.disconnect();
   }, [scheduleTransition]);
 
@@ -348,20 +337,19 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
       }));
       const resolvedSection = pickActiveSection(sectionRatios, SECTION_THRESHOLD) ?? s.targetSection;
       let resolvedStep = 0;
-      if (resolvedSection === SERVICES_SECTION_INDEX) {
-        const stepRatios = Array.from(serviceElsRef.current, ([el, idx]) => ({
-          index: idx,
-          ratio: computeVisibilityRatio(el),
-        }));
-        resolvedStep = pickActiveSection(stepRatios, SERVICE_THRESHOLD) ?? s.targetServiceStep;
+      if (stepCountOf(resolvedSection) > 1) {
+        const stepRatios = Array.from(stepElsRef.current)
+          .filter(([, info]) => info.section === resolvedSection)
+          .map(([el, info]) => ({ index: info.step, ratio: computeVisibilityRatio(el) }));
+        resolvedStep = pickActiveSection(stepRatios, STEP_THRESHOLD) ?? s.targetSectionStep;
       }
 
       setState((prev) => ({
         ...prev,
         currentSection: resolvedSection,
-        serviceStep: resolvedStep,
+        sectionStep: resolvedStep,
         targetSection: resolvedSection,
-        targetServiceStep: resolvedStep,
+        targetSectionStep: resolvedStep,
         progress: 0,
         status: 'IDLE_NA_SECAO',
       }));
@@ -370,9 +358,9 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   // Cada chamada a registerSection(index) devolve um ref-callback com sua PRÓPRIA
-  // variável de closure (currentEl) — necessário porque os 5 blocos de serviço
-  // registram todos o mesmo índice de seção (1) simultaneamente; uma limpeza "achar o
-  // elemento anterior com esse índice e remover" apagaria os outros 4.
+  // variável de closure (currentEl) — necessário porque os marcadores de uma seção com
+  // passos registram todos o mesmo índice de seção simultaneamente; uma limpeza "achar
+  // o elemento anterior com esse índice e remover" apagaria os outros.
   const registerSection = useCallback((index: number) => {
     let currentEl: HTMLElement | null = null;
     return (el: HTMLElement | null) => {
@@ -388,17 +376,17 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
-  const registerServiceStep = useCallback((index: number) => {
+  const registerStep = useCallback((section: number, step: number) => {
     let currentEl: HTMLElement | null = null;
     return (el: HTMLElement | null) => {
       if (currentEl) {
-        serviceObserverRef.current?.unobserve(currentEl);
-        serviceElsRef.current.delete(currentEl);
+        stepObserverRef.current?.unobserve(currentEl);
+        stepElsRef.current.delete(currentEl);
       }
       currentEl = el;
       if (el) {
-        serviceElsRef.current.set(el, index);
-        serviceObserverRef.current?.observe(el);
+        stepElsRef.current.set(el, { section, step });
+        stepObserverRef.current?.observe(el);
       }
     };
   }, []);
@@ -409,13 +397,13 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
         ...state,
         navigateTo,
         rewindToSection,
-        nextService,
-        prevService,
+        nextStep,
+        prevStep,
         triggerIntroExplode,
         startGenesis,
         setProgressManual,
         registerSection,
-        registerServiceStep,
+        registerStep,
       }}
     >
       {children}

@@ -10,7 +10,7 @@ import { useTransition } from '@/context/TransitionContext';
  * e transição dinâmica de preto-e-branco para cores saturadas.
  */
 export function TvColorBarsGlitchOverlay() {
-  const { currentSection, progress, serviceStep } = useTransition();
+  const { currentSection, progress, sectionStep } = useTransition();
 
   // Ativo somente na seção 1 (Serviços) durante o scroll de transição
   const isActive = currentSection === 1 && progress > 0.02 && progress < 0.98;
@@ -134,7 +134,7 @@ export function TvColorBarsGlitchOverlay() {
           SIGNAL INTERRUPT // SMPTE_COLOR_BARS
         </span>
         <span className="text-white/60">
-          TRANSIT: 0{serviceStep + 1} ➔ 0{Math.min(serviceStep + 2, 5)} [{(progress * 100).toFixed(0)}%]
+          TRANSIT: 0{sectionStep + 1} ➔ 0{Math.min(sectionStep + 2, 5)} [{(progress * 100).toFixed(0)}%]
         </span>
         <span className="text-white/40">NTSC 59.94Hz · FRAME_SYNC_LOST</span>
       </div>

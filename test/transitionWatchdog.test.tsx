@@ -23,7 +23,7 @@ function TestHarness() {
       <span data-testid="current-section">{currentSection}</span>
       <span data-testid="target-section">{targetSection}</span>
       {SECTION_SLUGS.map((slug, i) => (
-        <div key={slug} id={`secao-${slug}`} ref={registerSection(i)} />
+        <div key={slug} id={slug} ref={registerSection(i)} />
       ))}
       <button onClick={() => navigateTo(2)}>go-to-quem-pode-usar</button>
     </div>
@@ -81,9 +81,9 @@ describe('TransitionContext watchdog', () => {
     });
     expect(screen.getByTestId('target-section').textContent).toBe('2');
 
-    // Enquanto travado, o usuário rolou manualmente até "metodologia" (índice 3) —
+    // Enquanto travado, o usuário rolou manualmente até "metodo" (índice 3) —
     // simula isso fazendo esse elemento parecer 100% visível na viewport.
-    const metodologiaEl = document.getElementById('secao-metodologia')!;
+    const metodologiaEl = document.getElementById('metodo')!;
     vi.spyOn(metodologiaEl, 'getBoundingClientRect').mockReturnValue({
       top: 0,
       bottom: window.innerHeight,

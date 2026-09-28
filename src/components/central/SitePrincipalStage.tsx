@@ -2,7 +2,8 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useTransition, SECTION_SLUGS, SERVICE_SLUGS } from '@/context/TransitionContext';
+import { useTransition } from '@/context/TransitionContext';
+import { SCENE_SECTIONS } from '@/lib/scene-sections';
 import { IntroGeneseHero } from './IntroGeneseHero';
 import { ServicosGlitchSequence } from './ServicosGlitchSequence';
 import { QuemPodeUsarSectionStage } from './QuemPodeUsarSectionStage';
@@ -36,10 +37,75 @@ const CustomMagneticCursor = dynamic(
   { ssr: false }
 );
 
-const SERVICES_SECTION_INDEX = 1;
+/** Conteúdo de cada seção de topo, por slug. Seções com passos (stepIds em
+ * scene-sections) recebem o visual que fica sticky enquanto os passos rolam. */
+const SECTION_CONTENT: Record<string, React.ReactNode> = {
+  hero: <IntroGeneseHero />,
+  servicos: <ServicosGlitchSequence />,
+  'quem-pode-usar': <QuemPodeUsarSectionStage />,
+  metodo: <MetodologiaAkitaStory />,
+  contato: <ContatoRewindHud />,
+};
+
+type Attach = (el: HTMLElement | null) => void;
+
+/** <section> de uma tela, observada pelo TransitionContext. `attach` é o ref-callback de
+ * registerSection — recebido como prop (e não indexando o array no JSX do pai) porque
+ * `ref={arr[n]}` confunde a análise estática de react-hooks/refs. */
+function ScreenSection({ slug, attach, children }: { slug: string; attach: Attach; children: React.ReactNode }) {
+  return (
+    <section id={slug} ref={attach} style={{ height: '100dvh', scrollSnapAlign: 'start' }}>
+      {children}
+    </section>
+  );
+}
+
+/** Marcador invisível de 100svh de um passo; conta como a seção E como o passo. */
+function StepMarker({ id, step, attach }: { id: string; step: number; attach: Attach }) {
+  return (
+    <div
+      id={id}
+      ref={attach}
+      style={{
+        position: 'absolute',
+        top: `${step * 100}svh`,
+        height: '100svh',
+        width: '100%',
+        scrollSnapAlign: 'start',
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
+/** Seção com passos: N x 100svh. O visual fica sticky no topo da viewport enquanto o
+ * usuário rola por essa faixa alta; marcadores absolutos, um por 100svh, disparam o
+ * sectionStep correspondente ao entrar na viewport (scrollytelling clássico — sem
+ * scroll aninhado, tudo no mesmo <main>). Cada passo é uma tela de snap, então
+ * nenhuma seção fica mais alta que a viewport do ponto de vista do snap. */
+function SteppedSection({
+  slug,
+  stepIds,
+  attachers,
+  children,
+}: {
+  slug: string;
+  stepIds: string[];
+  attachers: Attach[];
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={slug} style={{ position: 'relative', height: `${stepIds.length * 100}svh` }}>
+      <div className="sticky top-0 h-svh overflow-hidden">{children}</div>
+      {stepIds.map((id, step) => (
+        <StepMarker key={id} id={id} step={step} attach={attachers[step]} />
+      ))}
+    </section>
+  );
+}
 
 export function SitePrincipalStage() {
-  const { status, registerSection, registerServiceStep } = useTransition();
+  const { status, registerSection, registerStep } = useTransition();
   // Overlay puramente cosmético, independente da máquina de estados de navegação:
   // some sozinho (ver IntroGenesisSplash) sem nunca bloquear o conteúdo por baixo.
   // isDismissing dispara o fade (duration-500 no próprio componente); showSplash
@@ -55,31 +121,29 @@ export function SitePrincipalStage() {
   // esconde brevemente durante a explosão 3D entre seções.
   const textReady = status === 'IDLE_NA_SECAO';
 
-  // Ref-callbacks por índice, memoizados: precisam manter identidade estável entre
-  // renders (senão o IntersectionObserver desinscreve/reinscreve os elementos toda
-  // hora). Os blocos de serviço registram os dois índices ao mesmo tempo: contam como
-  // a seção 1 pro observer de topo E como seu próprio serviceStep pro observer aninhado.
-  const sectionAttachers = useMemo(
-    () => SECTION_SLUGS.map((_, i) => registerSection(i)),
-    [registerSection]
-  );
-  // Desestruturados em variáveis nomeadas (em vez de indexar o array direto no JSX)
-  // porque `ref={arr[n]}` confunde a análise estática de react-hooks/refs.
-  const [heroAttacher, , quemPodeUsarAttacher, metodologiaAttacher, contatoAttacher] = sectionAttachers;
-  const serviceStepAttachers = useMemo(
+  // Ref-callbacks memoizados: precisam manter identidade estável entre renders (senão
+  // o IntersectionObserver desinscreve/reinscreve os elementos toda hora). Seções de
+  // uma tela registram só a seção; numa seção com passos, cada marcador registra os
+  // dois índices ao mesmo tempo: conta como a seção pro observer de topo E como seu
+  // próprio passo pro observer aninhado.
+  const attachers = useMemo(
     () =>
-      SERVICE_SLUGS.map((_, i) => {
-        // Cada bloco de serviço precisa da SUA PRÓPRIA chamada a registerSection —
-        // reusar uma única closure pros 5 blocos fazia cada anexação desregistrar a
-        // anterior (só o último bloco ficava contando como seção 1).
-        const attachSection = registerSection(SERVICES_SECTION_INDEX);
-        const attachStep = registerServiceStep(i);
-        return (el: HTMLElement | null) => {
-          attachSection(el);
-          attachStep(el);
-        };
-      }),
-    [registerSection, registerServiceStep]
+      SCENE_SECTIONS.map((section, i) =>
+        section.stepIds
+          ? section.stepIds.map((_, step) => {
+              // Cada marcador precisa da SUA PRÓPRIA chamada a registerSection — reusar
+              // uma única closure pros N marcadores fazia cada anexação desregistrar a
+              // anterior (só o último ficava contando como a seção).
+              const attachSection = registerSection(i);
+              const attachStep = registerStep(i, step);
+              return (el: HTMLElement | null) => {
+                attachSection(el);
+                attachStep(el);
+              };
+            })
+          : [registerSection(i)]
+      ),
+    [registerSection, registerStep]
   );
 
   return (
@@ -112,65 +176,22 @@ export function SitePrincipalStage() {
           pointerEvents: textReady ? 'auto' : 'none',
         }}
       >
-        <section
-          id={`secao-${SECTION_SLUGS[0]}`}
-          ref={heroAttacher}
-          style={{ height: '100dvh', scrollSnapAlign: 'start' }}
-        >
-          <IntroGeneseHero />
-        </section>
-
-        {/* Seção de Serviços: N x 100svh. O visual fica sticky no topo da viewport
-            enquanto o usuário rola por essa faixa alta; marcadores absolutos, um por
-            100svh, disparam o serviceStep correspondente ao entrar na viewport
-            (scrollytelling clássico — sem scroll aninhado, tudo no mesmo <main>). */}
-        <section
-          id={`secao-${SECTION_SLUGS[1]}`}
-          style={{ position: 'relative', height: `${SERVICE_SLUGS.length * 100}svh` }}
-        >
-          <div className="sticky top-0 h-svh overflow-hidden">
-            <ServicosGlitchSequence />
-          </div>
-          {SERVICE_SLUGS.map((slug, i) => (
-            <div
-              key={slug}
-              id={`servico-${slug}`}
-              ref={serviceStepAttachers[i]}
-              style={{
-                position: 'absolute',
-                top: `${i * 100}svh`,
-                height: '100svh',
-                width: '100%',
-                scrollSnapAlign: 'start',
-              }}
-              aria-hidden="true"
-            />
-          ))}
-        </section>
-
-        <section
-          id={`secao-${SECTION_SLUGS[2]}`}
-          ref={quemPodeUsarAttacher}
-          style={{ height: '100dvh', scrollSnapAlign: 'start' }}
-        >
-          <QuemPodeUsarSectionStage />
-        </section>
-
-        <section
-          id={`secao-${SECTION_SLUGS[3]}`}
-          ref={metodologiaAttacher}
-          style={{ height: '100dvh', scrollSnapAlign: 'start' }}
-        >
-          <MetodologiaAkitaStory />
-        </section>
-
-        <section
-          id={`secao-${SECTION_SLUGS[4]}`}
-          ref={contatoAttacher}
-          style={{ height: '100dvh', scrollSnapAlign: 'start' }}
-        >
-          <ContatoRewindHud />
-        </section>
+        {SCENE_SECTIONS.map((section, i) =>
+          section.stepIds ? (
+            <SteppedSection
+              key={section.slug}
+              slug={section.slug}
+              stepIds={section.stepIds}
+              attachers={attachers[i]}
+            >
+              {SECTION_CONTENT[section.slug]}
+            </SteppedSection>
+          ) : (
+            <ScreenSection key={section.slug} slug={section.slug} attach={attachers[i][0]}>
+              {SECTION_CONTENT[section.slug]}
+            </ScreenSection>
+          )
+        )}
       </main>
     </div>
   );

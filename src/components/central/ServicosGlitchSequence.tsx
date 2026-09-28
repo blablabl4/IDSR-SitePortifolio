@@ -127,9 +127,9 @@ const IDSR_SERVICES: ServiceItem[] = [
 ];
 
 export function ServicosGlitchSequence() {
-  const { serviceStep, progress, status } = useTransition();
+  const { sectionStep, progress, status } = useTransition();
 
-  const service = IDSR_SERVICES[serviceStep] || IDSR_SERVICES[0];
+  const service = IDSR_SERVICES[sectionStep] || IDSR_SERVICES[0];
   const isIdle = status === 'IDLE_NA_SECAO';
 
   // Efeito de Erro de Tela / Glitch: rajada breve, cirúrgica e concentrada

@@ -3,6 +3,7 @@
 import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useTransition } from '@/context/TransitionContext';
+import { SCENE_SECTIONS, SERVICES_SECTION_INDEX } from '@/lib/scene-sections';
 import {
   blockVertexShader,
   blockFragmentShader,
@@ -19,7 +20,7 @@ import {
 export function ParticleSceneCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { progress, currentSection, targetSection, status, serviceStep, targetServiceStep, direction, introExploded, isIntroGenesis } = useTransition();
+  const { progress, currentSection, targetSection, status, sectionStep, targetSectionStep, direction, introExploded, isIntroGenesis } = useTransition();
 
   // Estado de Blur Dinâmico dos Blocos:
   // Fica 100% nítido (blur 0px) durante o voo e transição;
@@ -50,8 +51,8 @@ export function ParticleSceneCanvas() {
     progress,
     currentSection,
     targetSection,
-    serviceStep,
-    targetServiceStep,
+    sectionStep,
+    targetSectionStep,
     direction,
     status,
     introExploded,
@@ -63,8 +64,8 @@ export function ParticleSceneCanvas() {
       progress,
       currentSection,
       targetSection,
-      serviceStep,
-      targetServiceStep,
+      sectionStep,
+      targetSectionStep,
       direction,
       status,
       introExploded,
@@ -266,12 +267,8 @@ export function ParticleSceneCanvas() {
     instancedGeometry.setAttribute('aInstanceForwardWeight', new THREE.InstancedBufferAttribute(forwardWeights, 1));
     instancedGeometry.setAttribute('aInstanceArrivalOrder', new THREE.InstancedBufferAttribute(arrivalOrders, 1));
 
-    // Paletas de Cores Temáticas Curadas com Alto Contraste e Elegância
-    const THEME_HERO = {
-      core: new THREE.Color('#f59e0b'), // Âmbar dourado
-      edge: new THREE.Color('#38e0e0'), // Ciano elétrico
-    };
-
+    // Paletas de Cores Temáticas Curadas com Alto Contraste e Elegância. As das seções
+    // de topo vêm de SCENE_SECTIONS (lib/scene-sections.ts); a de serviços é por serviço.
     const THEMES_SERVICES = [
       // 01: Automações - Ciano Neon & Turquesa
       { core: new THREE.Color('#06b6d4'), edge: new THREE.Color('#2dd4bf') },
@@ -285,28 +282,14 @@ export function ParticleSceneCanvas() {
       { core: new THREE.Color('#eab308'), edge: new THREE.Color('#f97316') },
     ];
 
-    const THEME_QUEM_PODE_USAR = {
-      core: new THREE.Color('#8b5cf6'), // Violeta Estratégico
-      edge: new THREE.Color('#38e0e0'), // Ciano Neon
-    };
-
-    const THEME_METODOLOGIA = {
-      core: new THREE.Color('#10b981'), // Esmeralda Computacional
-      edge: new THREE.Color('#06b6d4'), // Ciano Ártico
-    };
-
-    const THEME_CONTATO = {
-      core: new THREE.Color('#2563eb'), // Azul Cobalto Deep
-      edge: new THREE.Color('#38bdf8'), // Azul Céu Elétrico
-    };
+    const SECTION_THEMES = SCENE_SECTIONS.map((sec) =>
+      sec.theme ? { core: new THREE.Color(sec.theme.core), edge: new THREE.Color(sec.theme.edge) } : null
+    );
+    const THEME_HERO = SECTION_THEMES[0]!;
 
     const getThemeFor = (sec: number, step: number) => {
-      if (sec === 0) return THEME_HERO;
-      if (sec === 1) return THEMES_SERVICES[step] || THEMES_SERVICES[0];
-      if (sec === 2) return THEME_QUEM_PODE_USAR;
-      if (sec === 3) return THEME_METODOLOGIA;
-      if (sec === 4) return THEME_CONTATO;
-      return THEME_HERO;
+      if (sec === SERVICES_SECTION_INDEX) return THEMES_SERVICES[step] || THEMES_SERVICES[0];
+      return SECTION_THEMES[sec] ?? THEME_HERO;
     };
 
     const currentCoreColor = new THREE.Color('#f59e0b');
@@ -386,7 +369,7 @@ export function ParticleSceneCanvas() {
       const s = stateRef.current;
       const p = s.progress;
       const curSec = s.currentSection;
-      const curStep = s.serviceStep;
+      const curStep = s.sectionStep;
       const isRebobinando = s.status === 'REBOBINANDO';
       const isIdle = s.status === 'IDLE_NA_SECAO';
 
@@ -406,27 +389,19 @@ export function ParticleSceneCanvas() {
       // Identifica se a transição atual é mudança de seção (EXPLOSÃO 3D) ou entre serviços (GLITCH)
       // Funciona bidirecionalmente (avançando ou retrocedendo de trás para frente)
       const targetSec = s.targetSection;
-      const targetStep = s.targetServiceStep;
+      const targetStep = s.targetSectionStep;
 
       let isSectionTransition = false;
       let isServiceInternalGlitch = false;
 
       if (!isIdle) {
-        // Se estamos na seção de Serviços (curSec === 1):
-        if (curSec === 1) {
-          // Apenas do 4º serviço para a próxima seção (targetSec === 2) ou do 1º de volta ao Hero (targetSec === 0) explodem blocos!
-          if (targetSec !== 1) {
-            isSectionTransition = true;
-            isServiceInternalGlitch = false;
-          } else {
-            // Entre serviços (1->2, 2->3, 3->4 e retrocedendo 4->3, 3->2, 2->1):
-            // NUNCA EXPLODE! BLOCOS ESTÁTICOS + TV COLOR BARS GLITCH!
-            isSectionTransition = false;
-            isServiceInternalGlitch = true;
-          }
+        // Troca de passo dentro da mesma seção (serviço → serviço, FAQ → FAQ): NUNCA
+        // EXPLODE — blocos estáticos + TV color bars glitch. Troca de seção (Hero → Serviços,
+        // último serviço → Quem Pode Usar, Método → Preços, etc.): EXPLOSÃO 3D DE BLOCOS.
+        if (targetSec === curSec) {
+          isSectionTransition = false;
+          isServiceInternalGlitch = true;
         } else {
-          // Demais transições de seções (Hero -> Serv. 1, Metodologia -> Contato, etc.):
-          // EXPLOSÃO 3D DE BLOCOS!
           isSectionTransition = true;
           isServiceInternalGlitch = false;
         }
