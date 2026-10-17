@@ -178,6 +178,12 @@ export const OFFER_GUARANTEES = [
   { title: 'Suporte com Engenheiro', detail: 'Atendimento direto com quem constrói' },
 ];
 
+/** Chamada da seção de FAQ (copy de /precos). */
+export const OFFER_FAQ_INTRO = {
+  title: 'FAQ',
+  description: 'Tire suas dúvidas sobre implantação, tecnologia e funcionamento prático da IDSR.',
+};
+
 export interface OfferFaqItem {
   question: string;
   answer: string;

@@ -55,7 +55,7 @@ describe('Home page (render server-side)', () => {
     }
   });
 
-  it('HTML do servidor tem os 3 planos, o preço Starter e as 6 FAQs (inclusive passos ocultos)', () => {
+  it('HTML do servidor tem os 3 planos, o preço Starter e as 6 FAQs (inclusive respostas fechadas)', () => {
     const text = squash(htmlText(renderToString(<Home />)));
     expect(text).toContain(squash(STARTER_PRICE));
     for (const plan of OFFER_PLANS) {
@@ -67,6 +67,15 @@ describe('Home page (render server-side)', () => {
       expect(text).toContain(squash(faq.question));
       expect(text).toContain(squash(faq.answer));
     }
+  });
+
+  it('FAQ: uma resposta por pergunta no HTML, todas fechadas (hidden) no primeiro render', () => {
+    const html = renderToString(<Home />);
+    OFFER_PRICING_FAQ.forEach((_, i) => {
+      const m = html.match(new RegExp(`<div[^>]*id="faq-resposta-${i + 1}"[^>]*>`));
+      expect(m, `resposta ${i + 1}`).not.toBeNull();
+      expect(m![0]).toContain('hidden');
+    });
   });
 
   it('HUD tem um link de âncora por seção e nenhum link para páginas internas', () => {

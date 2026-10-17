@@ -6,7 +6,7 @@
  * que adicionar uma seção seja uma entrada nova, não uma caça a `sec === 4` espalhados.
  */
 
-import { OFFER_MODULES, OFFER_PRICING_FAQ } from './offer';
+import { OFFER_MODULES } from './offer';
 
 export interface SceneTheme {
   /** Cor do núcleo dos blocos 3D. */
@@ -44,13 +44,8 @@ export const SCENE_SECTIONS: SceneSection[] = [
   },
   { slug: 'quem-pode-usar', label: 'QUEM PODE USAR', accent: '#8b5cf6', theme: { core: '#8b5cf6', edge: '#38e0e0' } },
   { slug: 'metodo', label: 'MÉTODO', accent: '#10b981', theme: { core: '#10b981', edge: '#06b6d4' } },
-  {
-    slug: 'precos',
-    label: 'PREÇOS',
-    accent: '#eab308',
-    theme: { core: '#eab308', edge: '#10b981' },
-    stepIds: ['precos-planos', ...OFFER_PRICING_FAQ.map((_, i) => `precos-faq-${i + 1}`)],
-  },
+  { slug: 'precos', label: 'PREÇOS', accent: '#eab308', theme: { core: '#eab308', edge: '#10b981' } },
+  { slug: 'faq', label: 'FAQ', accent: '#2dd4bf', theme: { core: '#14b8a6', edge: '#eab308' } },
   { slug: 'contato', label: 'CONTATO', accent: '#38bdf8', theme: { core: '#2563eb', edge: '#38bdf8' } },
 ];
 

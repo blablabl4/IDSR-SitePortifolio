@@ -6,7 +6,8 @@ import { useTransition } from '@/context/TransitionContext';
 import { SCENE_SECTIONS } from '@/lib/scene-sections';
 import { IntroGeneseHero } from './IntroGeneseHero';
 import { ServicosGlitchSequence } from './ServicosGlitchSequence';
-import { PrecosGlitchSequence } from './PrecosGlitchSequence';
+import { PrecosSection } from './PrecosSection';
+import { FaqSection } from './FaqSection';
 import { QuemPodeUsarSectionStage } from './QuemPodeUsarSectionStage';
 import { MetodologiaAkitaStory } from './MetodologiaAkitaStory';
 import { ContatoRewindHud } from './ContatoRewindHud';
@@ -45,7 +46,8 @@ const SECTION_CONTENT: Record<string, React.ReactNode> = {
   servicos: <ServicosGlitchSequence />,
   'quem-pode-usar': <QuemPodeUsarSectionStage />,
   metodo: <MetodologiaAkitaStory />,
-  precos: <PrecosGlitchSequence />,
+  precos: <PrecosSection />,
+  faq: <FaqSection />,
   contato: <ContatoRewindHud />,
 };
 

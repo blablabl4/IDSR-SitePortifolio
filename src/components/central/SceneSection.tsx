@@ -5,21 +5,45 @@ import { useTransition } from '@/context/TransitionContext';
 import { LazyMount } from './LazyMount';
 
 /**
- * Moldura das seções novas da cena: a mesma camada de scanlines e o mesmo glitch
- * (deslocamento horizontal + queda de opacidade na rajada 0.05–0.48 do progress) que
- * ServicosGlitchSequence aplica, pra que seção nova e antiga sejam indistinguíveis.
- * O texto de cada seção entra como children e sai no HTML do servidor; `demo` é o
- * lugar de conteúdo interativo pesado, montado só perto da viewport (LazyMount).
+ * Moldura das seções novas da cena, com os mesmos efeitos das seções originais:
+ *
+ * - `screen` (padrão): seção de uma tela só. Durante a explosão 3D entre seções o
+ *   conteúdo esmaece e encolhe levemente com o progress — o mesmo cálculo de
+ *   MetodologiaAkitaStory (opacity 1 - p*1.5, scale 1 - p*0.05). Sem glitch.
+ * - `steps`: seção com subdivisões (2.1, 2.2…). Camada de scanlines + rajada de
+ *   glitch (deslocamento horizontal e queda de opacidade entre 0.05 e 0.48 do
+ *   progress), idêntica a ServicosGlitchSequence.
+ *
+ * O texto entra como children e sai no HTML do servidor; `demo` é o lugar de
+ * conteúdo interativo pesado, montado só perto da viewport (LazyMount).
  */
 export function SceneSection({
   children,
   demo,
+  variant = 'screen',
 }: {
   children: React.ReactNode;
   /** Conteúdo interativo pesado (ex.: ChatInterface), montado sob demanda. */
   demo?: React.ReactNode;
+  variant?: 'screen' | 'steps';
 }) {
   const { progress } = useTransition();
+
+  if (variant === 'screen') {
+    const opacity = Math.max(0, 1 - progress * 1.5);
+    const scale = 1 - progress * 0.05;
+    return (
+      <div
+        className="relative w-full h-full flex items-center justify-center px-4 sm:px-8 lg:px-12 py-3 sm:py-5 overflow-hidden select-none will-change-transform"
+        style={{ opacity, transform: `scale(${scale})` }}
+      >
+        <div className="w-full max-w-7xl mx-auto flex flex-col justify-center z-10">
+          {children}
+          {demo ? <LazyMount>{demo}</LazyMount> : null}
+        </div>
+      </div>
+    );
+  }
 
   // Efeito de Erro de Tela / Glitch: rajada breve, cirúrgica e concentrada
   const glitchActive = progress > 0.05 && progress < 0.48;
